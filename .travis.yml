@@ -1,6 +1,6 @@
 language: c
 script:
-  ./run-tests.sh
+  FreeFem++ #./run-tests.sh
 branches:
   only:
     - master
