@@ -1,0 +1,198 @@
+// Discontinous Galerlin SIP Method for solve Stokes system
+//
+// Based on [Di Pietro - Ern, Mathematical Aspects of Discontinuous
+// Galerkin Methods], Chapter 6
+//
+// J. Rafael Rodr\'iguez Galv\'an
+
+load "Element_P3"
+load "Element_P4"
+load "Element_P3dc"
+load "Element_P4dc"
+
+////////////////
+// Parameters //
+////////////////
+
+verbosity=0;
+real PenaltyConstant=1.0e+10; // Penalty to achieve coercivity
+real nu=1.;
+
+// macro hFace() (1.0/sqrt(n)) // An approximation of h_F (length of face)
+macro hFace() (lenEdge) // An approximation of h_F (length of face)
+  ;
+macro PenaltyParameter() (PenaltyConstant/hFace) // EOM
+  ;
+
+real pEpsilon  = 1.0e-14; // Penalty epsilon in p-equations
+
+real domainEpsilon = 1.e-7; // Domain Epsilon
+real dEpsilon2 = domainEpsilon*domainEpsilon;
+
+int [int] meshSizes= [8,16,32,64];
+
+include "exact-sol-HydStokes-steady.idp"
+func f1 = f1Exact; // RHS / u
+func f2 = f2Exact; // RHS / v
+
+for(int i=0; i<meshSizes.n; i++) {
+  int n = meshSizes[i];
+  cout << "n=" << n << endl;
+
+  ////////////////////////////////////
+  // Mesh and Finite Element Spaces //
+  ////////////////////////////////////
+  mesh Th = square(n,n);
+  int bottom=1, surface=3; int [int] walls = [2,4];
+
+  // Discontinuous FE
+  fespace UhDisc(Th,P2dc);
+  fespace VhDisc(Th,P2dc);
+  fespace PhDisc(Th,P1dc);
+  UhDisc u, ub;
+  VhDisc v, vb;
+  PhDisc p, pb;
+
+  // Continuous FE (for testing)
+  fespace UhCont(Th,P2);
+  fespace VhCont(Th,P2);
+  fespace PhCont(Th,P1);
+  UhCont uu, uub;
+  VhCont vv, vvb;
+  PhCont pp, ppb;
+
+  ////////////
+  // Macros //
+  ////////////
+
+  macro dn(u) (N.x*dx(u)+N.y*dy(u) ) //  Normal derivative
+    ;
+  macro div(u,v) (dx(u)+dy(v)) // EOM
+    ;
+  // def: jump = external - internal value; on border exter value =0
+  //      average = (external + internal value)/2, on border just internal value
+  NewMacro aUSIP(u,ub)
+    (
+     int2d(Th) ( nu * ( dx(u)*dx(ub) + dy(u)*dy(ub) ) )
+     + intalledges(Th)
+     (
+      PenaltyParameter*(jump(u)*jump(ub)) /nTonEdge
+      - ( jump(ub)*average(dn(u)) + jump(u)*average(dn(ub)) ) /nTonEdge
+      )
+     ) EndMacro;
+  NewMacro aVSIP(v,vb)
+    (
+     int2d(Th) ( nu*dEpsilon2 * ( dx(v)*dx(vb) + dy(v)*dy(vb) ) )
+     + intalledges(Th)
+     (
+      // dEpsilon2*PenaltyParameter*(jump(v)*jump(vb)) /nTonEdge
+      PenaltyParameter*(jump(v)*jump(vb)) /nTonEdge
+      - dEpsilon2*( jump(vb)*average(dn(v)) + jump(v)*average(dn(vb)) ) /nTonEdge
+      )
+     ) EndMacro;
+  macro bSIP1(u,v,p) int2d(Th)( -p*(div(u,v)) ) // EOM
+    ;
+  NewMacro bSIP2(u,v,p)
+    intalledges(Th)
+    (
+     (jump(u)*N.x + jump(v)*N.y)*average(p) /nTonEdge
+     ) EndMacro;
+  NewMacro sSIP(q,r)
+    intalledges(Th)
+    (
+     (nTonEdge-1)*hFace*jump(q)*jump(r)
+     ) EndMacro;
+
+  //////////////////////////////
+  // Variational Formulations //
+  //////////////////////////////
+
+  problem HydStokesSIP([u,v,p], [ub,vb,pb]) =
+    aUSIP(u,ub) + aVSIP(v,vb) // Bilinear form a(.,.)
+    + bSIP1(ub,vb,p) + bSIP2(ub,vb,p) // Bilinear form b(.,.)
+    - bSIP1(u,v,pb) - bSIP2(u,v,pb) // Bilinear form b(.,.)
+    + sSIP(p, pb) // Stabilization
+    + int2d(Th)( pEpsilon*p*pb )
+    - int2d(Th)
+    (
+     + f1(x,y) * ub
+     + f2(x,y) * vb
+     )
+    + int1d(Th, bottom, walls, surface)
+    ( // Dirichlet condition (imposee de maniere faible)
+     uExact(x,y)*(dn(ub)-PenaltyParameter*ub)
+     + dEpsilon2*vExact(x,y)*(dn(vb)-PenaltyParameter*vb)
+     );
+    // + on(bottom,  u=uExact(x,y), v=vExact(x,y))
+    // + on(walls,   u=uExact(x,y), v=vExact(x,y))
+    // + on(surface, u=uExact(x,y), v=vExact(x,y));
+
+  problem HydStokes([uu,vv,pp], [uub,vvb,ppb]) =
+    int2d(Th) (
+	       + nu * ( dx(uu)*dx(uub) + dy(uu)*dy(uub) )
+	       + nu*dEpsilon2 * ( dx(vv)*dx(vvb) + dy(vv)*dy(vvb) )
+	       - pp*dx(uub) - pp*dy(vvb)
+	       + dx(uu)*ppb + dy(vv)*ppb
+	       // + nu*div(uu,vv)*dy(vvb) // dz(v) stabilization term
+	       + pEpsilon*pp*ppb
+	       )
+    - int2d(Th) (
+		 + f1(x,y) * uub
+		 + f2(x,y) * vvb
+		 )
+    // + int1d(Th, bottom, walls, surface)
+    // (
+    //  uExact(x,y)*(dn(uub)-PenaltyParameter*uub) // Dirichlet condition (imposee de maniere faible)
+    //  + vExact(x,y)*(dn(vvb)-PenaltyParameter*vvb) // Dirichlet condition (imposee de maniere faible)
+    //  );
+    + on(bottom,  uu=uExact(x,y), vv=vExact(x,y))
+    + on(walls,   uu=uExact(x,y), vv=vExact(x,y))
+    + on(surface, uu=uExact(x,y), vv=vExact(x,y));
+
+  //////////////
+  // Solve DG //
+  //////////////
+  real time0, time1;
+  time0 = clock();
+  HydStokesSIP;
+  time1 = clock();
+  cout << "DG SIP time: " << time1-time0 << endl;
+  plot(p,cmm="Discontinuous Galerkin",wait=1,value=1,fill=1);
+
+  //////////////
+  // Solve CG //
+  //////////////
+  time0 = clock();
+  HydStokes;
+  time1 = clock();
+  cout << "CG time:     " << time1-time0 << endl;
+  plot(pp,cmm="Continuous Galekin",wait=1,value=1,fill=1);
+
+  // cout << "Residual (DG): " << int2d(Th,qforder=qfo)(dx(u)*dx(u) +
+  // dy(u)*dy(u) - int2d(Th)(f*u)) << endl;
+  // cout << "Residual (CG): " << int2d(Th)(dx(uu)*dx(uu) +
+  // dy(uu)*dy(uu) - int2d(Th)(f*uu)) << endl;
+
+  // Vh error = u-uExact;
+  cout << "DG u error L2: " << sqrt(int2d(Th)(square(u-uExact(x,y)))) << "<<***" << endl;
+  cout << "CG u error L2: " << sqrt(int2d(Th)(square(uu-uExact(x,y)))) << endl;
+
+  if(true) {
+    load "iovtk";
+    savevtk("/tmp/DGsolution" + n + ".vtk",
+	    Th,
+	    [u,v,0],
+	    p,
+	    dataname="Velocity Pressure") ;
+    savevtk("/tmp/CGsolution" + n + ".vtk",
+	    Th,
+	    [uu,vv,0],
+	    pp,
+	    dataname="Velocity Pressure") ;
+    savevtk("/tmp/EXACTsolution" + n + ".vtk",
+	    Th,
+	    [uExact(x,y),vExact(x,y),0],
+	    pExact(x,y),
+	    dataname="ExactV ExactP") ;
+  }
+ }

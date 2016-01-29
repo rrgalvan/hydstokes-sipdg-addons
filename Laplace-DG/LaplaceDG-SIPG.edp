@@ -1,0 +1,105 @@
+// Discontinous Galerlin SIP Method for solve
+//
+//  $ -\Delta u = f$ on $\Omega$ and $u=g$ on $\Gamma$
+//
+// Based on [Di Pietro - Ern, Mathematical Aspects of Discontinuous
+// Galerkin Methods], Section 4.2.1. eq. (4.14).
+//
+// J. Rafael Rodr\'iguez Galv\'an
+
+load "Element_P3"
+load "Element_P4"
+load "Element_P3dc"
+load "Element_P4dc"
+
+////////////////
+// Parameters //
+////////////////
+
+verbosity=0;
+real PenaltyParameter=1000; // Penalisation for achieve coercivity
+real C=1.;
+func uExact = C*(1-x*x-y*y);
+func DXuExact = -2*C*x;
+func DYuExact = -2*C*y;
+func DXXuExact = -2*C;
+func DYYuExact = -2*C;
+func f=-DXXuExact-DYYuExact; // RHS
+func g=0;  // Dirichlet boundary condition
+int [int] dirichletBoundary=[1,2,3,4];
+
+
+int [int] meshSizes= [8,16,32,64,132];
+
+for(int i=0; i<meshSizes.n; i++) {
+  int n = meshSizes[i];
+  cout << "n=" << n << endl;
+
+  ////////////////////////////////////
+  // Mesh and Finite Element Spaces //
+  ////////////////////////////////////
+  border C(t=0,2*pi){x=cos(t); y=sin(t);}
+  mesh Th = buildmesh (C(n));
+
+  int k = 3; // Degree of the polynomials (2 for P2dc ...)
+  assert(k==3); func PkDisc = P3dc;  // Discontinuous Pk
+  int qfo =2*k+1;  // Order of quadrature formula
+
+  fespace Vh(Th,PkDisc);  // Broken FE space
+  Vh u,v;
+
+  // Continuous FE (for testing)
+  fespace VhCont(Th,P3);
+  VhCont uu, vv;
+
+  ////////////
+  // Macros //
+  ////////////
+
+  macro dn(u) (N.x*dx(u)+N.y*dy(u) ) //  Normal derivative
+  // def: jump = external - internal value; on border exter value =0
+  //      average = (external + internal value)/2, on border just internal value
+  macro aSIP(u,v) (jump(v)*average(dn(u)) + jump(u)*average(dn(v)) + PenaltyParameter*jump(u)*jump(v)) //EOM
+
+  /////////////////////////////
+  // Variational Formulation //
+  /////////////////////////////
+
+    problem PoissonSIP(u,v)
+    = int2d(Th, qforder=qfo)( dx(u)*dx(v)+dy(u)*dy(v) )  // Diffusion
+    + intalledges(Th, qforder=qfo)( aSIP(u,v) / nTonEdge ) // Consitency and coervicity terms
+    //   (RK: In FreeFem++ nTonEdge = 1 on border edge and = 2 on internal edges)
+    - int2d(Th, qforder=qfo)(f*v) // RHS
+    + int1d(Th, dirichletBoundary, qforder=qfo)( g*(dn(v)-PenaltyParameter*v) ); // Dirichlet condition (imposee de maniere faible)
+
+  problem Poisson(uu,vv,solver=CG)
+    = int2d(Th)(dx(uu)*dx(vv)+dy(uu)*dy(vv)) - int2d(Th)(f*vv) + on(1,2,3,4,uu=g);
+
+  //////////////
+  // Solve DG //
+  //////////////
+  real time0, time1;
+  time0 = clock();
+  PoissonSIP;
+  time1 = clock();
+  cout << "DG SIP time: " << time1-time0 << endl;
+
+  //////////////
+  // Solve CG //
+  //////////////
+  // plot(u,cmm="Discontinuous Galerkin",wait=1,value=1,fill=1);
+  time0 = clock();
+  Poisson;
+  time1 = clock();
+  cout << "CG time:     " << time1-time0 << endl;
+  // plot(uu,cmm="Continuous Galekin",wait=1,value=1,fill=1);
+
+  // cout << "Residual (DG): " << int2d(Th,qforder=qfo)(dx(u)*dx(u) + dy(u)*dy(u) - int2d(Th)(f*u)) << endl;
+  // cout << "Residual (CG): " << int2d(Th)(dx(uu)*dx(uu) + dy(uu)*dy(uu) - int2d(Th)(f*uu)) << endl;
+
+  plot(Th);
+  Vh error = u-uExact;
+  cout << "DG error L2: " << int2d(Th)(error[]'*error[]) << endl;
+  error = uu-uExact;
+  cout << "CG error L2: " << int2d(Th)(error[]'*error[]) << endl;
+ }
