@@ -2,7 +2,7 @@ language: c
 addons:
   apt:
     packages:
-    - freefem++
+      - freefem++
 script:
   FreeFem++ #./run-tests.sh
 branches:
