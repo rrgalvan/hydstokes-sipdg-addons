@@ -1,8 +1,4 @@
 language: c
-addons:
-  apt:
-    packages:
-    - bats
 script:
   make test
 branches:
