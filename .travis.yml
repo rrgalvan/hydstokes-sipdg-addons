@@ -4,7 +4,7 @@ addons:
     packages:
       - freefem++
 script:
-  FreeFem++ #./run-tests.sh
+  make tests
 branches:
   only:
     - master
