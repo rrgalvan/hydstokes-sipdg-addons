@@ -9,7 +9,8 @@
 
 for directory in */
 do
-    echo "Running tests in directory $directory..........."
+    echo "$directory"
+    echo "### $directory ###"
     cd $directory
     bats ./run-tests.sh
     cd ..
