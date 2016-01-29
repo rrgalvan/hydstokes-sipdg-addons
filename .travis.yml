@@ -3,7 +3,6 @@ addons:
   apt:
     packages:
     - bats
-    - freefem++
 script:
   make test
 branches:
