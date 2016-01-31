@@ -1,2 +1,2 @@
-tests:
-	bats ./run-tests.sh
+test:
+	nosetests run_tests.py */		

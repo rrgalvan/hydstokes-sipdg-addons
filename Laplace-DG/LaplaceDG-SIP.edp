@@ -17,6 +17,8 @@ load "Element_P4dc"
 ////////////////
 
 verbosity=0;
+int interactive=0; // If 1: plot results
+
 real PenaltyParameter=1000; // Penalisation for achieve coercivity
 real C=1.;
 func uExact = C*(1-x*x-y*y);
@@ -29,17 +31,18 @@ func g=0;  // Dirichlet boundary condition
 int [int] dirichletBoundary=[1,2,3,4];
 
 
-int [int] meshSizes= [8,16,32,64,132];
+int [int] meshSizes= [8,16,32]; //,64,132];
 
 for(int i=0; i<meshSizes.n; i++) {
   int n = meshSizes[i];
-  cout << "n=" << n << endl;
+  cout << "Test, n=" << n << endl;
 
   ////////////////////////////////////
   // Mesh and Finite Element Spaces //
   ////////////////////////////////////
   border C(t=0,2*pi){x=cos(t); y=sin(t);}
   mesh Th = buildmesh (C(n));
+  if(interactive) {plot(Th);}
 
   int k = 3; // Degree of the polynomials (2 for P2dc ...)
   assert(k==3); func PkDisc = P3dc;  // Discontinuous Pk
@@ -87,17 +90,16 @@ for(int i=0; i<meshSizes.n; i++) {
   //////////////
   // Solve CG //
   //////////////
-  // plot(u,cmm="Discontinuous Galerkin",wait=1,value=1,fill=1);
+  if(interactive) {plot(u,cmm="Discontinuous Galerkin",wait=1,value=1,fill=1);}
   time0 = clock();
   Poisson;
   time1 = clock();
   cout << "CG time:     " << time1-time0 << endl;
-  // plot(uu,cmm="Continuous Galekin",wait=1,value=1,fill=1);
+  if(interactive) plot(uu,cmm="Continuous Galekin",wait=1,value=1,fill=1);
 
   // cout << "Residual (DG): " << int2d(Th,qforder=qfo)(dx(u)*dx(u) + dy(u)*dy(u) - int2d(Th)(f*u)) << endl;
   // cout << "Residual (CG): " << int2d(Th)(dx(uu)*dx(uu) + dy(uu)*dy(uu) - int2d(Th)(f*uu)) << endl;
 
-  plot(Th);
   Vh error = u-uExact;
   cout << "DG error L2: " << int2d(Th)(error[]'*error[]) << endl;
   error = uu-uExact;
