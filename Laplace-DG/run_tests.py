@@ -3,53 +3,79 @@ from nose.tools import with_setup
 
 import subprocess
 
-output="" # Global variable to be used by test functions
+freefem_output="" # Global variable to be used by test functions
+last_index=0 # Globas variable, for avoid starting from zero
 
 def setup_function():
     "Setup code needed by most tests"
-    global output
+    global freefem_output
     edp_script = "LaplaceDG-SIP.edp"
-    output = subprocess.check_output(["FreeFem++", edp_script])
-    output = output.split('\n')
+    freefem_output = subprocess.check_output(["FreeFem++", edp_script])
+    freefem_output = freefem_output.split('\n')
     # Assert that 'FreeFem++' substring is found in first output line
-    assert_not_equal(output[0].find('FreeFem++'), -1)
+    assert_not_equal(freefem_output[0].find('FreeFem++'), -1)
 
-def read_DG_CG_errors_from_line(i,n):
-    iDGerror = i+3 # Line where DG error was printed
-    line = output[iDGerror]
-    line = line.split('=')
-    errorDG = float(line[1])
+def read_data(all_lines, heading_line, nb_data_lines, start=0, data_separator='='):
+    """Read data contained in the list of strings 'all_lines'
 
-    iCGerror = i+4 # Line where CG error was printed
-    line = output[iCGerror]
-    line = line.split('=')
-    errorCG = float(line[1])
+    This function reads lines from 'all_lines', searching (from the one
+    with index start) for one containing the string contained in
+    heading_line. The following nb_data_lines lines are supposed to store
+    data formatted as
 
-    return[errorDG, errorCG]
+    key = value
+
+    Other data separators (not only '=') are allowed. Data is read in a dictionary.
+    Function returns a list containing the dictionary and the number of line where
+    heading_line was found.
+    """
+
+    d = dict()
+    for i in xrange(len(all_lines)):
+        line = all_lines[i]
+        if(line.find(heading_line) != -1): # Found heading line
+            d = dict( item.split(data_separator)
+                      for item in all_lines[i+1: i+nb_data_lines+1] )
+            break
+    return [d, i]
 
 @with_setup(setup_function)
-def test_laplace_errors_n8():
-    "Test Laplace DG Errors for n=8 (mesh size)"
-    test_pass = False
+def test_laplace_errors():
+    "Test DG vs CG errors for the Laplace problem"
+    global last_index # For avoid start searching lines from zero
+    nb_data_lines = 4 # Number of data lines for each test output
+    data_separator='=' # Separator defining (key, value)
 
-    # String defining the start of data lines
-    test_start_strings = ["Test, n=8", "Test, n=16"]
-    expected_
-    # Number of data lines
-    test_n_data_lines = 4
-
-    for i in xrange(len(output)):
-        line = output[i]
-        # Find a line where a target data starts
-        for s in test_start_strings:
-            if(line.find(s) != -1):
-                n = test_n_data_lines
-                # Build a dictionary from wollowing n lines
-                d = dict(item.split(':') for item in output[i+1:i+n+1])
-                # Extract data from the dictionary and assert data is OK
-                errorDG = float(d[r'DG error L2'])
-                errorCG = float(d[r'CG error L2'])
-                assert_almost_equal(errorDG, errorCG, places=1)
-                test_pass = True
-                break
-    assert(test_pass)
+    # List of tests. Each element contains a dictionary with:
+    # - A string defining the start of data lines
+    # - A floating point defining the nb. of exact digits after decimal point
+    list_of_tests = [
+        {
+        'id_string': 'Test, n=8',
+        'fp_places': 1
+        }, {
+        'id_string': 'Test, n=16',
+        'fp_places': 2
+        }, {
+        'id_string': 'Test, n=32',
+        'fp_places': 2
+        }, {
+        'id_string': 'Test, n=64',
+        'fp_places': 3
+        }, {
+        'id_string': 'Test, n=128',
+        'fp_places': 4
+        }
+    ]
+    for test in list_of_tests:
+        [d, last_index] = read_data(freefem_output,
+                                    heading_line=test['id_string'],
+                                    nb_data_lines=4,
+                                    start=last_index)
+        errorDG = float( d['DG error L2'] )
+        errorCG = float( d['CG error L2'] )
+        try:
+            assert_almost_equal(errorDG, errorCG, places=test['fp_places'])
+        except Exception, e:
+            print "Error in test '%s'" % (test['id_string'])
+            raise e

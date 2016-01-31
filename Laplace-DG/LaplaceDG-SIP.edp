@@ -31,7 +31,7 @@ func g=0;  // Dirichlet boundary condition
 int [int] dirichletBoundary=[1,2,3,4];
 
 
-int [int] meshSizes= [8,16,32]; //,64,132];
+int [int] meshSizes= [8,16,32,64,128];
 
 for(int i=0; i<meshSizes.n; i++) {
   int n = meshSizes[i];
@@ -85,7 +85,7 @@ for(int i=0; i<meshSizes.n; i++) {
   time0 = clock();
   PoissonSIP;
   time1 = clock();
-  cout << "DG SIP time: " << time1-time0 << endl;
+  cout << "DG SIP time= " << time1-time0 << endl;
 
   //////////////
   // Solve CG //
@@ -94,14 +94,14 @@ for(int i=0; i<meshSizes.n; i++) {
   time0 = clock();
   Poisson;
   time1 = clock();
-  cout << "CG time:     " << time1-time0 << endl;
+  cout << "CG time=     " << time1-time0 << endl;
   if(interactive) plot(uu,cmm="Continuous Galekin",wait=1,value=1,fill=1);
 
   // cout << "Residual (DG): " << int2d(Th,qforder=qfo)(dx(u)*dx(u) + dy(u)*dy(u) - int2d(Th)(f*u)) << endl;
   // cout << "Residual (CG): " << int2d(Th)(dx(uu)*dx(uu) + dy(uu)*dy(uu) - int2d(Th)(f*uu)) << endl;
 
   Vh error = u-uExact;
-  cout << "DG error L2: " << int2d(Th)(error[]'*error[]) << endl;
+  cout << "DG error L2= " << int2d(Th)(error[]'*error[]) << endl;
   error = uu-uExact;
-  cout << "CG error L2: " << int2d(Th)(error[]'*error[]) << endl;
+  cout << "CG error L2= " << int2d(Th)(error[]'*error[]) << endl;
  }
