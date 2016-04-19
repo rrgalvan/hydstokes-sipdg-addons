@@ -163,7 +163,7 @@ for(int i=0; i<meshSizes.n; i++) {
   p = p - pMean;
 
   time1 = clock();
-  cout << "DG SIP time: " << time1-time0 << endl;
+  cout << "DG SIP time: " << time1-time0 << " << [SIP-DG]"<< endl;
   // plot([u,v],cmm="Discontinuous Galerkin",wait=1,value=1,fill=1);
   // plot(p,cmm="Discontinuous Galerkin",wait=1,value=1,fill=1);
 
@@ -183,11 +183,11 @@ for(int i=0; i<meshSizes.n; i++) {
   // dy(uu)*dy(uu) - int2d(Th)(f*uu)) << endl;
 
   real divDG = int2d(Th)(div(u,v)), divCG = int2d(Th)(div(uu,vv));
-  cout << "DG Divergence (integral in L2): " << divDG << endl;
+  cout << "DG Divergence (integral in L2): " << divDG << " << [SIP-DG]" << endl;
   cout << " CG Divergence (integral in L2): " << divCG << endl;
   real kinDG = sqrt(int2d(Th)(square(u)+square(v)));
   real kinCG = sqrt(int2d(Th)(square(uu)+square(vv)));
-  cout << "DG Kinetic Energy: " << kinDG << endl;
+  cout << "DG Kinetic Energy: " << kinDG << " << [SIP-DG]" << endl;
   cout << " CG Kinetic Energy: " << kinCG << endl;
 
   if(true) {

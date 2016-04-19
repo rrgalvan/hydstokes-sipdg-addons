@@ -107,7 +107,7 @@ for(int i=0; i<meshSizes.n; i++) {
   // Variational Formulations //
   //////////////////////////////
 
-  problem HydStokesSIP([u,v,p], [ub,vb,pb]) =
+  problem HydStokesSIP([u,v,p], [ub,vb,pb], solver=sparsesolver) =
     aUSIP(u,ub) + aVSIP(v,vb) // Bilinear form a(.,.)
     + bSIP1(ub,vb,p) + bSIP2(ub,vb,p) // Bilinear form b(.,.)
     - bSIP1(u,v,pb) - bSIP2(u,v,pb) // Bilinear form b(.,.)
@@ -127,7 +127,7 @@ for(int i=0; i<meshSizes.n; i++) {
     // + on(walls,   u=uExact(x,y), v=vExact(x,y))
     // + on(surface, u=uExact(x,y), v=vExact(x,y));
 
-  problem HydStokes([uu,vv,pp], [uub,vvb,ppb]) =
+  problem HydStokes([uu,vv,pp], [uub,vvb,ppb], solver=sparsesolver) =
     int2d(Th) (
 	       + nu * ( dx(uu)*dx(uub) + dy(uu)*dy(uub) )
 	       + nu*dEpsilon2 * ( dx(vv)*dx(vvb) + dy(vv)*dy(vvb) )
@@ -156,7 +156,7 @@ for(int i=0; i<meshSizes.n; i++) {
   time0 = clock();
   HydStokesSIP;
   time1 = clock();
-  cout << "DG SIP time: " << time1-time0 << endl;
+  cout << "DG SIP time: " << time1-time0 << " << [SIP-DG]"<< endl;
   plot(p,cmm="Discontinuous Galerkin",wait=1,value=1,fill=1);
 
   //////////////
@@ -174,7 +174,7 @@ for(int i=0; i<meshSizes.n; i++) {
   // dy(uu)*dy(uu) - int2d(Th)(f*uu)) << endl;
 
   // Vh error = u-uExact;
-  cout << "DG u error L2: " << sqrt(int2d(Th)(square(u-uExact(x,y)))) << "<<***" << endl;
+  cout << "DG u error L2: " << sqrt(int2d(Th)(square(u-uExact(x,y)))) << " << [SIP-DG]" << endl;
   cout << "CG u error L2: " << sqrt(int2d(Th)(square(uu-uExact(x,y)))) << endl;
 
   if(true) {
