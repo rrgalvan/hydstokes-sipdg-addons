@@ -4,6 +4,7 @@
 // Galerkin Methods], Chapter 6
 //
 // J. Rafael Rodr\'iguez Galv\'an
+// load "MUMPS_FreeFem"
 
 load "Element_P3"
 load "Element_P4"
@@ -15,8 +16,11 @@ load "Element_P4dc"
 ////////////////
 
 verbosity=0;
-real PenaltyConstant=1.0e+10; // Penalty to achieve coercivity
-real nu=1.;
+real PenaltyConstant=1.0e+10; // DG Penalty (to achieve coercivity)
+real nu=1.; // Horizontal viscosity coefficient
+
+real domainEpsilon = 1.e-7; // Domain Epsilon
+real dEpsilon2 = domainEpsilon*domainEpsilon;
 
 // macro hFace() (1.0/sqrt(n)) // An approximation of h_F (length of face)
 macro hFace() (lenEdge) // An approximation of h_F (length of face)
@@ -24,12 +28,7 @@ macro hFace() (lenEdge) // An approximation of h_F (length of face)
 macro PenaltyParameter() (PenaltyConstant/hFace) // EOM
   ;
 
-real pEpsilon  = 1.0e-14; // Penalty epsilon in p-equations
-
-real domainEpsilon = 1.e-7; // Domain Epsilon
-real dEpsilon2 = domainEpsilon*domainEpsilon;
-
-int [int] meshSizes= [8,16,32,64];
+int [int] meshSizes= [8,16,32];
 
 include "exact-sol-HydStokes-steady.idp"
 func f1 = f1Exact; // RHS / u
@@ -46,8 +45,8 @@ for(int i=0; i<meshSizes.n; i++) {
   int bottom=1, surface=3; int [int] walls = [2,4];
 
   // Discontinuous FE
-  fespace UhDisc(Th,P2dc);
-  fespace VhDisc(Th,P2dc);
+  fespace UhDisc(Th,P1dc);
+  fespace VhDisc(Th,P1dc);
   fespace PhDisc(Th,P1dc);
   UhDisc u, ub;
   VhDisc v, vb;
@@ -112,7 +111,7 @@ for(int i=0; i<meshSizes.n; i++) {
     + bSIP1(ub,vb,p) + bSIP2(ub,vb,p) // Bilinear form b(.,.)
     - bSIP1(u,v,pb) - bSIP2(u,v,pb) // Bilinear form b(.,.)
     + sSIP(p, pb) // Stabilization
-    + int2d(Th)( pEpsilon*p*pb )
+    + int2d(Th)( 1.e-4*p*pb )
     - int2d(Th)
     (
      + f1(x,y) * ub
@@ -133,8 +132,8 @@ for(int i=0; i<meshSizes.n; i++) {
 	       + nu*dEpsilon2 * ( dx(vv)*dx(vvb) + dy(vv)*dy(vvb) )
 	       - pp*dx(uub) - pp*dy(vvb)
 	       + dx(uu)*ppb + dy(vv)*ppb
-	       // + nu*div(uu,vv)*dy(vvb) // dz(v) stabilization term
-	       + pEpsilon*pp*ppb
+	       + nu*div(uu,vv)*dy(vvb) // dz(v) stabilization term
+	       + 1.e-10*pp*ppb
 	       )
     - int2d(Th) (
 		 + f1(x,y) * uub
