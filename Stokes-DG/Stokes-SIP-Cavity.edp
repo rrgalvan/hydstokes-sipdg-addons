@@ -23,7 +23,7 @@ macro hFace() (lenEdge) // An approximation of h_F (length of face)
   ;
 macro PenaltyParameter() (PenaltyConstant/hFace) // EOM
   ;
-
+macro beta() (1.e+15) // Penalty for Nitsche trick (weak Dirichlet condition)
 
 func uSurface = x*(1-x); // Horizontal surface velocity in cavity test
 func f1 = 0; // RHS / u
@@ -99,24 +99,36 @@ for(int i=0; i<meshSizes.n; i++) {
     + bSIP1(ub,vb,p) + bSIP2(ub,vb,p) // Bilinear form b(.,.)
     - bSIP1(u,v,pb) - bSIP2(u,v,pb) // Bilinear form b(.,.)
     + sSIP(p, pb) // Stabilization
-    + int2d(Th)( pEpsilon*p*pb )
+    + int1d(Th, surface)
+    (
+     - nu*(dn(u)*ub + dn(v)*vb)
+     + nu*(u*dn(ub) + v*dn(vb))
+     + beta*n*(u*ub + v*vb)  // n = 1/(h_e)
+    )
+    + int1d(Th, bottom, walls)
+    (
+     - nu*(dn(u)*ub + dn(v)*vb)
+     + nu*(u*dn(ub) + v*dn(vb))
+     + beta*n*(u*ub + v*vb)
+     )
+    /////////
+    // RHS //
+    /////////
     - int2d(Th)
     (
      + f1 * ub
      + f2 * vb
      )
-    + int1d(Th, surface)
-    ( // Dirichlet condition (imposee de maniere faible)
-     uSurface*(dn(ub)-PenaltyParameter*ub)
-     + 0.0*(dn(vb)-PenaltyParameter*vb)
+    - int1d(Th, surface)
+    (
+     + nu*(uSurface*dn(ub) + 0.0*dn(vb))
+     + beta*n*uSurface*ub + 0.0*vb //
+    )
+    - int1d(Th, bottom, walls)
+    (
+     + nu*(0.0*dn(ub) + 0.0*dn(vb))
+     + 0.0*ub + 0.0*vb //
      );
-    + int1d(Th, bottom, walls)
-    ( // Dirichlet condition (imposee de maniere faible)
-     0.0*(dn(ub)-PenaltyParameter*ub)
-     + 0.0*(dn(vb)-PenaltyParameter*vb)
-     );
-    // + on(surface, u=uSurface, v=1.0)
-    // + on(bottom, walls, u=1.0, v=1.0);
 
   problem Stokes([uu,vv,pp], [uub,vvb,ppb]) =
     int2d(Th) (
@@ -126,24 +138,68 @@ for(int i=0; i<meshSizes.n; i++) {
 	       + dx(uu)*ppb + dy(vv)*ppb
 	       + pEpsilon*pp*ppb
 	       )
+    + int1d(Th, surface)
+    (
+     - nu*(dn(uu)*uub + dn(vv)*vvb)
+     + nu*(uu*dn(uub) + vv*dn(vvb))
+     + beta*n*(uu*uub + vv*vvb)  // n = 1/(h_e)
+    )
+    + int1d(Th, bottom, walls)
+    (
+     - nu*(dn(uu)*uub + dn(vv)*vvb)
+     + nu*(uu*dn(uub) + vv*dn(vvb))
+     + beta*n*(uu*uub + vv*vvb)
+     )
+    // + intalledges(Th) (
+    // 		       (nTonEdge==1)*(1.0/hFace)*uu*uub
+    // 		       + (nTonEdge==1)*(1.0/hFace)*vv*vvb
+    // 		       )
+    // + int1d(Th, surface)
+    // ( // Dirichlet condition (imposee de maniere faible)
+    //  uu*dn(uub)-PenaltyParameter*uu*uub
+    //  + vv*dn(vvb)-PenaltyParameter*vv*vvb
+    //  )
+    // + int1d(Th, bottom, walls)
+    // ( // Dirichlet condition (imposee de maniere faible)
+    //  uu*dn(uub)-PenaltyParameter*uu*uub
+    //  + vv*dn(vvb)-PenaltyParameter*vv*vvb
+    //  )
+    /////////
+    // RHS //
+    /////////
     - int2d(Th) (
 		 + f1 * uub
 		 + f2 * vvb
 		 )
-    // + int1d(Th, bottom, walls, surface)
-    // (
-    //  uExact(x,y)*(dn(uub)-PenaltyParameter*uub) // Dirichlet condition (imposee de maniere faible)
-    //  + vExact(x,y)*(dn(vvb)-PenaltyParameter*vvb) // Dirichlet condition (imposee de maniere faible)
+    - int1d(Th, surface)
+    (
+     + nu*(uSurface*dn(uub) + 0.0*dn(vvb))
+     + beta*n*uSurface*uub + 0.0*vvb //
+    )
+    - int1d(Th, bottom, walls)
+    (
+     + nu*(0.0*dn(uub) + 0.0*dn(vvb))
+     + 0.0*uub + 0.0*vvb //
+     );
+    // + int1d(Th, surface)
+    // ( // Dirichlet condition (imposee de maniere faible)
+    //  uSurface*(dn(uub)-PenaltyParameter*uub)
+    //  + 0.0*(dn(vvb)-PenaltyParameter*vvb)
+    //  )
+    // + int1d(Th, bottom, walls)
+    // ( // Dirichlet condition (imposee de maniere faible)
+    //  0.0*(dn(uub)-PenaltyParameter*uub)
+    //  + 0.0*(dn(vvb)-PenaltyParameter*vvb)
     //  );
-    + on(surface, uu=uSurface, vv=0.0)
-    + on(bottom, walls, uu=0.0, vv=0.0);
+    // + on(surface, uu=uSurface, vv=0.0)
+    // + on(bottom, walls, uu=0.0, vv=0.0);
 
   //////////////
   // Solve DG //
   //////////////
   real time0, time1;
   time0 = clock();
-  // StokesSIP;
+  StokesSIP;
   time1 = clock();
   cout << "DG SIP time: " << time1-time0 << endl;
   // plot(p,cmm="DG-mesh_size=" + n,wait=1,value=1,fill=1);
