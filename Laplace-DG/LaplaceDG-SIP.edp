@@ -17,7 +17,7 @@ load "Element_P4dc"
 ////////////////
 
 verbosity=0;
-int interactive=0; // If 1: plot results
+int interactive=1; // If 1: plot results
 
 real PenaltyParameter=1000; // Penalisation for achieve coercivity
 real C=1.;
@@ -30,8 +30,9 @@ func f=-DXXuExact-DYYuExact; // RHS
 func g=0;  // Dirichlet boundary condition
 int [int] dirichletBoundary=[1,2,3,4];
 
+macro hFace() (lenEdge) // An approximation of h_F (length of face)
 
-int [int] meshSizes= [8,16,32,64,128];
+  int [int] meshSizes= [8,16,32,64,128,256];
 
 for(int i=0; i<meshSizes.n; i++) {
   int n = meshSizes[i];
@@ -44,15 +45,17 @@ for(int i=0; i<meshSizes.n; i++) {
   mesh Th = buildmesh (C(n));
   if(interactive) {plot(Th);}
 
-  int k = 3; // Degree of the polynomials (2 for P2dc ...)
-  assert(k==3); func PkDisc = P3dc;  // Discontinuous Pk
+  int k = 2; // Degree of the polynomials (2 for P2dc ...)
+  assert(k==2);
+  func PkDG = P2dc;  // Discontinuous Pk
+  func PkCG = P2;  // Continuous Pk
   int qfo =2*k+1;  // Order of quadrature formula
 
-  fespace Vh(Th,PkDisc);  // Broken FE space
+  fespace Vh(Th,PkDG);  // Broken FE space
   Vh u,v;
 
   // Continuous FE (for testing)
-  fespace VhCont(Th,P3);
+  fespace VhCont(Th,PkCG);
   VhCont uu, vv;
 
   ////////////
@@ -60,18 +63,24 @@ for(int i=0; i<meshSizes.n; i++) {
   ////////////
 
   macro dn(u) (N.x*dx(u)+N.y*dy(u) ) //  Normal derivative
+    ;
   // def: jump = external - internal value; on border exter value =0
   //      average = (external + internal value)/2, on border just internal value
-  macro aSIP(u,v) (jump(v)*average(dn(u)) + jump(u)*average(dn(v)) + PenaltyParameter*jump(u)*jump(v)) //EOM
+  //   (RK: In FreeFem++ nTonEdge = 1 on border edge and = 2 on internal edges)
+  NewMacro aSIP(u,v)
+    (
+     int2d(Th, qforder=qfo)( dx(u)*dx(v)+dy(u)*dy(v) )  // Diffusion
+     +intalledges(Th, qforder=qfo)  // Consitency and coervicity terms
+     ( ( jump(v)*average(dn(u)) + jump(u)*average(dn(v)) ) / nTonEdge
+      + PenaltyParameter*jump(u)*jump(v)/hFace )
+     ) EndMacro;
 
   /////////////////////////////
   // Variational Formulation //
   /////////////////////////////
 
     problem PoissonSIP(u,v)
-    = int2d(Th, qforder=qfo)( dx(u)*dx(v)+dy(u)*dy(v) )  // Diffusion
-    + intalledges(Th, qforder=qfo)( aSIP(u,v) / nTonEdge ) // Consitency and coervicity terms
-    //   (RK: In FreeFem++ nTonEdge = 1 on border edge and = 2 on internal edges)
+    = aSIP(u,v)
     - int2d(Th, qforder=qfo)(f*v) // RHS
     + int1d(Th, dirichletBoundary, qforder=qfo)( g*(dn(v)-PenaltyParameter*v) ); // Dirichlet condition (imposee de maniere faible)
 
@@ -95,7 +104,7 @@ for(int i=0; i<meshSizes.n; i++) {
   Poisson;
   time1 = clock();
   cout << "CG time=     " << time1-time0 << endl;
-  if(interactive) plot(uu,cmm="Continuous Galekin",wait=1,value=1,fill=1);
+  if(interactive) plot(uu,cmm="Continuous Galerkin",wait=1,value=1,fill=1);
 
   // cout << "Residual (DG): " << int2d(Th,qforder=qfo)(dx(u)*dx(u) + dy(u)*dy(u) - int2d(Th)(f*u)) << endl;
   // cout << "Residual (CG): " << int2d(Th)(dx(uu)*dx(uu) + dy(uu)*dy(uu) - int2d(Th)(f*uu)) << endl;
