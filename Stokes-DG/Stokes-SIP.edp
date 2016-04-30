@@ -15,13 +15,15 @@ load "Element_P4dc"
 ////////////////
 
 verbosity=0;
-real PenaltyConstant=1.0e+10; // Penalty to achieve coercivity
+int interactive=1; // If 1: plot results
+
+real PenaltyConstant=5.0e+3; // Penalty to achieve coercivity
 real nu=1.;
 
 // macro hFace() (1.0/sqrt(n)) // An approximation of h_F (length of face)
 macro hFace() (lenEdge) // An approximation of h_F (length of face)
   ;
-macro PenaltyParameter() (PenaltyConstant/hFace) // EOM
+macro LocalPenalty() (PenaltyConstant/hFace) // EOM
   ;
 
 include "exact-sol-Stokes-steady.idp"
@@ -42,18 +44,26 @@ for(int i=0; i<meshSizes.n; i++) {
   mesh Th = square(n,n);
   int bottom=1, surface=3; int [int] walls = [2,4];
 
+  int k = 1; // Degree of the polynomials (2 for P2dc ...)
+  assert(k==1); // Assure to change the following lines...
+  func PkDG = P1dc;  // Discontinuous Pk
+  func PkCGu = P1b;  // Continous Pk for velocity
+  func PkCGp = P1;  // Continous Pk for pressure
+  int qfo = 2*k;  // Order of quadrature formula
+  int qfoP = qfo+1;  // Order of quadrature formula for pressure integrals
+
   // Discontinuous FE
-  fespace UhDisc(Th,P1dc);
-  fespace VhDisc(Th,P1dc);
-  fespace PhDisc(Th,P1dc);
+  fespace UhDisc(Th,PkDG);
+  fespace VhDisc(Th,PkDG);
+  fespace PhDisc(Th,PkDG);
   UhDisc u, ub;
   VhDisc v, vb;
   PhDisc p, pb;
 
   // Continuous FE (for testing)
-  fespace UhCont(Th,P1b);
-  fespace VhCont(Th,P1b);
-  fespace PhCont(Th,P1);
+  fespace UhCont(Th,PkCGu);
+  fespace VhCont(Th,PkCGu);
+  fespace PhCont(Th,PkCGp);
   UhCont uu, uub;
   VhCont vv, vvb;
   PhCont pp, ppb;
@@ -70,22 +80,23 @@ for(int i=0; i<meshSizes.n; i++) {
   //      average = (external + internal value)/2, on border just internal value
   NewMacro aSIP(u,ub)
     (
-     int2d(Th) ( nu * ( dx(u)*dx(ub) + dy(u)*dy(ub) ) )
-     + intalledges(Th)
+     int2d(Th, qforder=qfo) ( nu * ( dx(u)*dx(ub) + dy(u)*dy(ub) ) )
+     + intalledges(Th, qforder=qfo)
      (
-      PenaltyParameter*(jump(u)*jump(ub)) /nTonEdge
-      - ( jump(ub)*average(dn(u)) + jump(u)*average(dn(ub)) ) /nTonEdge
+      ( jump(ub)*average(dn(u)) + jump(u)*average(dn(ub)) ) /nTonEdge
+      + LocalPenalty*(jump(u)*jump(ub))
       )
      ) EndMacro;
-  macro bSIP1(u,v,p) int2d(Th)( -p*(div(u,v)) ) // EOM
-    ;
+  NewMacro bSIP1(u,v,p)
+    int2d(Th, qforder=qfo)( -p*(div(u,v)) )
+    EndMacro;
   NewMacro bSIP2(u,v,p)
-    intalledges(Th)
+    intalledges(Th, qforder=qfo)
     (
      (jump(u)*N.x + jump(v)*N.y)*average(p) /nTonEdge
      ) EndMacro;
   NewMacro sSIP(q,r)
-    intalledges(Th)
+    intalledges(Th, qforder=qfoP)
     (
      (nTonEdge-1)*hFace*jump(q)*jump(r)
      ) EndMacro;
@@ -99,7 +110,7 @@ for(int i=0; i<meshSizes.n; i++) {
     + bSIP1(ub,vb,p) + bSIP2(ub,vb,p) // Bilinear form b(.,.)
     - bSIP1(u,v,pb) - bSIP2(u,v,pb) // Bilinear form b(.,.)
     + sSIP(p, pb) // Stabilization
-    + int2d(Th)( pEpsilon*p*pb )
+    + int2d(Th)(pEpsilon*p*pb)
     - int2d(Th)
     (
      + f1(x,y) * ub
@@ -107,8 +118,8 @@ for(int i=0; i<meshSizes.n; i++) {
      )
     + int1d(Th, bottom, walls, surface)
     ( // Dirichlet condition (imposee de maniere faible)
-     uExact(x,y)*(dn(ub)-PenaltyParameter*ub)
-     + vExact(x,y)*(dn(vb)-PenaltyParameter*vb)
+     uExact(x,y)*(dn(ub)-LocalPenalty*ub)
+     + vExact(x,y)*(dn(vb)-LocalPenalty*vb)
      );
     // + on(bottom,  u=uExact(x,y), v=vExact(x,y))
     // + on(walls,   u=uExact(x,y), v=vExact(x,y))
@@ -128,8 +139,8 @@ for(int i=0; i<meshSizes.n; i++) {
 		 )
     // + int1d(Th, bottom, walls, surface)
     // (
-    //  uExact(x,y)*(dn(uub)-PenaltyParameter*uub) // Dirichlet condition (imposee de maniere faible)
-    //  + vExact(x,y)*(dn(vvb)-PenaltyParameter*vvb) // Dirichlet condition (imposee de maniere faible)
+    //  uExact(x,y)*(dn(uub)-LocalPenalty*uub) // Dirichlet condition (imposee de maniere faible)
+    //  + vExact(x,y)*(dn(vvb)-LocalPenalty*vvb) // Dirichlet condition (imposee de maniere faible)
     //  );
     + on(bottom,  uu=uExact(x,y), vv=vExact(x,y))
     + on(walls,   uu=uExact(x,y), vv=vExact(x,y))
@@ -141,9 +152,15 @@ for(int i=0; i<meshSizes.n; i++) {
   real time0, time1;
   time0 = clock();
   StokesSIP;
+  // Force zero mean
+  bool forceZeroMean=false; if(forceZeroMean) {
+    PhDisc one; one[] = 1.;
+    real pMean = int2d(Th)(p)/int2d(Th)(one);
+    p = p - pMean;
+  }
   time1 = clock();
   cout << "DG SIP time: " << time1-time0 << endl;
-  plot(p,cmm="Discontinuous Galerkin",wait=1,value=1,fill=1);
+  if(interactive) plot(p,cmm="Discontinuous Galerkin",wait=1,value=1,fill=1);
 
   if(true) {
     load "iovtk";
@@ -166,7 +183,7 @@ for(int i=0; i<meshSizes.n; i++) {
   Stokes;
   time1 = clock();
   cout << "CG time:     " << time1-time0 << endl;
-  plot(pp,cmm="Continuous Galekin",wait=1,value=1,fill=1);
+  if(interactive) plot(pp,cmm="Continuous Galerkin",wait=1,value=1,fill=1);
 
   // cout << "Residual (DG): " << int2d(Th,qforder=qfo)(dx(u)*dx(u) +
   // dy(u)*dy(u) - int2d(Th)(f*u)) << endl;
@@ -174,6 +191,10 @@ for(int i=0; i<meshSizes.n; i++) {
   // dy(uu)*dy(uu) - int2d(Th)(f*uu)) << endl;
 
   // Vh error = u-uExact;
-  cout << "DG u error L2: " << sqrt(int2d(Th)(square(u-uExact(x,y)))) << "<<***" << endl;
-  cout << "CG u error L2: " << sqrt(int2d(Th)(square(uu-uExact(x,y)))) << endl;
+  real uError = sqrt(int2d(Th)(square(u-uExact(x,y))));
+  real pError = sqrt(int2d(Th)(square(p-pExact(x,y))));
+  cout << "DG u/p error L2: " << uError << "/" << pError << "<<***" << endl;
+  real uuError = sqrt(int2d(Th)(square(uu-uExact(x,y))));
+  real ppError = sqrt(int2d(Th)(square(pp-pExact(x,y))));
+  cout << "CG u/p error L2: " << uuError << "/" << ppError << endl;
  }

@@ -15,13 +15,13 @@ load "Element_P4dc"
 ////////////////
 
 verbosity=0;
-real PenaltyConstant=1.0e+10; // Penalty to achieve coercivity
+real PenaltyConstant=1.0e+1; // Penalty to achieve coercivity
 real nu=1.0;
 
 // macro hFace() (1.0/sqrt(n)) // An approximation of h_F (length of face)
 macro hFace() (lenEdge) // An approximation of h_F (length of face)
   ;
-macro PenaltyParameter() (PenaltyConstant/hFace) // EOM
+macro LocalPenalty() (PenaltyConstant/hFace) // EOM
   ;
 macro beta() (1.e+15) // Penalty for Nitsche trick (weak Dirichlet condition)
 
@@ -42,18 +42,26 @@ for(int i=0; i<meshSizes.n; i++) {
   mesh Th = square(n,n);
   int bottom=1, surface=3; int [int] walls = [2,4];
 
+  int k = 1; // Degree of the polynomials (2 for P2dc ...)
+  assert(k==1); // Assure to change the following lines...
+  func PkDG = P1dc;  // Discontinuous Pk
+  func PkCGu = P1b;  // Continous Pk for velocity
+  func PkCGp = P1;  // Continous Pk for pressure
+  int qfo = 2*k;  // Order of quadrature formula
+  int qfoP = qfo+1;  // Order of quadrature formula for pressure integrals
+
   // Discontinuous FE
-  fespace UhDisc(Th,P1dc);
-  fespace VhDisc(Th,P1dc);
-  fespace PhDisc(Th,P1dc);
+  fespace UhDisc(Th,PkDG);
+  fespace VhDisc(Th,PkDG);
+  fespace PhDisc(Th,PkDG);
   UhDisc u, ub;
   VhDisc v, vb;
   PhDisc p, pb;
 
   // Continuous FE (for testing)
-  fespace UhCont(Th,P1b);
-  fespace VhCont(Th,P1b);
-  fespace PhCont(Th,P1);
+  fespace UhCont(Th,PkCGu);
+  fespace VhCont(Th,PkCGu);
+  fespace PhCont(Th,PkCGp);
   UhCont uu, uub;
   VhCont vv, vvb;
   PhCont pp, ppb;
@@ -70,64 +78,46 @@ for(int i=0; i<meshSizes.n; i++) {
   //      average = (external + internal value)/2, on border just internal value
   NewMacro aSIP(u,ub)
     (
-     int2d(Th) ( nu * ( dx(u)*dx(ub) + dy(u)*dy(ub) ) )
-     + intalledges(Th)
+     int2d(Th, qforder=qfo) ( nu * ( dx(u)*dx(ub) + dy(u)*dy(ub) ) )
+     + intalledges(Th, qforder=qfo)
      (
-      PenaltyParameter*(jump(u)*jump(ub)) /nTonEdge
-      - ( jump(ub)*average(dn(u)) + jump(u)*average(dn(ub)) ) /nTonEdge
+      ( jump(ub)*average(dn(u)) + jump(u)*average(dn(ub)) ) /nTonEdge
+      + (LocalPenalty)*(jump(u)*jump(ub))
       )
      ) EndMacro;
-  macro bSIP1(u,v,p) int2d(Th)( -p*(div(u,v)) ) // EOM
-    ;
+  NewMacro bSIP1(u,v,p)
+    int2d(Th, qforder=qfo)( -p*(div(u,v)) )
+    EndMacro;
   NewMacro bSIP2(u,v,p)
-    intalledges(Th)
+    intalledges(Th, qforder=qfo)
     (
      (jump(u)*N.x + jump(v)*N.y)*average(p) /nTonEdge
      ) EndMacro;
   NewMacro sSIP(q,r)
-    intalledges(Th)
+    intalledges(Th, qforder=qfoP)
     (
      (nTonEdge-1)*hFace*jump(q)*jump(r)
      ) EndMacro;
 
-  //////////////////////////////
-  // Variational Formulations //
-  //////////////////////////////
+  // //////////////////////////////
+  // // Variational Formulations //
+  // //////////////////////////////
 
   problem StokesSIP([u,v,p], [ub,vb,pb]) =
     aSIP(u,ub) + aSIP(v,vb) // Bilinear form a(.,.)
     + bSIP1(ub,vb,p) + bSIP2(ub,vb,p) // Bilinear form b(.,.)
     - bSIP1(u,v,pb) - bSIP2(u,v,pb) // Bilinear form b(.,.)
     + sSIP(p, pb) // Stabilization
+    + int2d(Th)(pEpsilon*p*pb)
     + int1d(Th, surface)
-    (
-     - nu*(dn(u)*ub + dn(v)*vb)
-     + nu*(u*dn(ub) + v*dn(vb))
-     + beta*n*(u*ub + v*vb)  // n = 1/(h_e)
-    )
+    ( // Dirichlet condition (imposee de maniere faible)
+     uSurface*(dn(ub)-LocalPenalty*ub)
+     + 0.0*(dn(vb)-LocalPenalty*vb)
+     );
     + int1d(Th, bottom, walls)
-    (
-     - nu*(dn(u)*ub + dn(v)*vb)
-     + nu*(u*dn(ub) + v*dn(vb))
-     + beta*n*(u*ub + v*vb)
-     )
-    /////////
-    // RHS //
-    /////////
-    - int2d(Th)
-    (
-     + f1 * ub
-     + f2 * vb
-     )
-    - int1d(Th, surface)
-    (
-     + nu*(uSurface*dn(ub) + 0.0*dn(vb))
-     + beta*n*uSurface*ub + 0.0*vb //
-    )
-    - int1d(Th, bottom, walls)
-    (
-     + nu*(0.0*dn(ub) + 0.0*dn(vb))
-     + 0.0*ub + 0.0*vb //
+    ( // Dirichlet condition (imposee de maniere faible)
+     0.0*(dn(ub)-LocalPenalty*ub)
+     + 0.0*(dn(vb)-LocalPenalty*vb)
      );
 
   problem Stokes([uu,vv,pp], [uub,vvb,ppb]) =
@@ -156,13 +146,13 @@ for(int i=0; i<meshSizes.n; i++) {
     // 		       )
     // + int1d(Th, surface)
     // ( // Dirichlet condition (imposee de maniere faible)
-    //  uu*dn(uub)-PenaltyParameter*uu*uub
-    //  + vv*dn(vvb)-PenaltyParameter*vv*vvb
+    //  uu*dn(uub)-LocalPenalty*uu*uub
+    //  + vv*dn(vvb)-LocalPenalty*vv*vvb
     //  )
     // + int1d(Th, bottom, walls)
     // ( // Dirichlet condition (imposee de maniere faible)
-    //  uu*dn(uub)-PenaltyParameter*uu*uub
-    //  + vv*dn(vvb)-PenaltyParameter*vv*vvb
+    //  uu*dn(uub)-LocalPenalty*uu*uub
+    //  + vv*dn(vvb)-LocalPenalty*vv*vvb
     //  )
     /////////
     // RHS //
@@ -183,13 +173,13 @@ for(int i=0; i<meshSizes.n; i++) {
      );
     // + int1d(Th, surface)
     // ( // Dirichlet condition (imposee de maniere faible)
-    //  uSurface*(dn(uub)-PenaltyParameter*uub)
-    //  + 0.0*(dn(vvb)-PenaltyParameter*vvb)
+    //  uSurface*(dn(uub)-LocalPenalty*uub)
+    //  + 0.0*(dn(vvb)-LocalPenalty*vvb)
     //  )
     // + int1d(Th, bottom, walls)
     // ( // Dirichlet condition (imposee de maniere faible)
-    //  0.0*(dn(uub)-PenaltyParameter*uub)
-    //  + 0.0*(dn(vvb)-PenaltyParameter*vvb)
+    //  0.0*(dn(uub)-LocalPenalty*uub)
+    //  + 0.0*(dn(vvb)-LocalPenalty*vvb)
     //  );
     // + on(surface, uu=uSurface, vv=0.0)
     // + on(bottom, walls, uu=0.0, vv=0.0);
@@ -218,7 +208,7 @@ for(int i=0; i<meshSizes.n; i++) {
   real kinCG = sqrt(int2d(Th)(square(uu)+square(vv)));
   cout << " Kinetic Energy................ CG/DG: " << kinCG << " / " << kinDG << endl;
   real pDG = sqrt(int2d(Th)(square(p)));
-  real pCG = sqrt(int2d(Th)(square(p)));
+  real pCG = sqrt(int2d(Th)(square(pp)));
   cout << " Pressure (squared norm)....... CG/DG: " << pCG << " / " << pDG << endl;
 
   if(true) {
@@ -242,6 +232,8 @@ for(int i=0; i<meshSizes.n; i++) {
   Stokes;
   time1 = clock();
   cout << "CG time:     " << time1-time0 << endl;
+
+  plot(p,cmm="DG pressure-mesh_size=" + n ,wait=1,value=1,fill=1);
   plot(pp,cmm="CG pressure-mesh_size=" + n ,wait=1,value=1,fill=1);
 
   // cout << "Residual (DG): " << int2d(Th,qforder=qfo)(dx(u)*dx(u) +
