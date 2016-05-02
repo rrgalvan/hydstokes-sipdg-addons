@@ -15,17 +15,18 @@ load "Element_P4dc"
 ////////////////
 
 verbosity=0;
-real PenaltyConstant=1.0e+1; // Penalty to achieve coercivity
+real SIPPenalty=1.0e+2; // Penalty to achieve coercivity in DG SIP forms
+real BoundaryPenalty=1.0e+1; // Penalty for Nitsche trick (weak Dirichlet condition)
 real nu=1.0;
 
 // macro hFace() (1.0/sqrt(n)) // An approximation of h_F (length of face)
 macro hFace() (lenEdge) // An approximation of h_F (length of face)
   ;
-macro LocalPenalty() (PenaltyConstant/hFace) // EOM
+macro LocalPenalty() (SIPPenalty/hFace) // EOM
   ;
-macro beta() (1.e+15) // Penalty for Nitsche trick (weak Dirichlet condition)
 
-func uSurface = x*(1-x); // Horizontal surface velocity in cavity test
+// func uSurface = x*(1-x); // Horizontal surface velocity in cavity test
+func uSurface=1;
 func f1 = 0; // RHS / u
 func f2 = 0; // RHS / v
 real pEpsilon  = 1.0e-10; // Penalty epsilon in p-equations
@@ -109,15 +110,31 @@ for(int i=0; i<meshSizes.n; i++) {
     - bSIP1(u,v,pb) - bSIP2(u,v,pb) // Bilinear form b(.,.)
     + sSIP(p, pb) // Stabilization
     + int2d(Th)(pEpsilon*p*pb)
-    + int1d(Th, surface)
-    ( // Dirichlet condition (imposee de maniere faible)
-     uSurface*(dn(ub)-LocalPenalty*ub)
-     + 0.0*(dn(vb)-LocalPenalty*vb)
-     );
-    + int1d(Th, bottom, walls)
-    ( // Dirichlet condition (imposee de maniere faible)
-     0.0*(dn(ub)-LocalPenalty*ub)
-     + 0.0*(dn(vb)-LocalPenalty*vb)
+    + int1d(Th, surface, bottom, walls)
+    (
+     - nu*(dn(u)*ub + dn(v)*vb)
+     + nu*(u*dn(ub) + v*dn(vb))
+     + BoundaryPenalty*n*(u*ub + v*vb)  // n = 1/(h_e)
+    )
+    // + int1d(Th, surface)
+    // ( // Dirichlet condition (imposee de maniere faible)
+    //  uSurface*(dn(ub)-BoundaryPenaltyConstant*ub)
+    //  + 0.0*(dn(vb)-BoundaryPenaltyConstant*vb)
+    //  );
+    // + int1d(Th, bottom, walls)
+    // ( // Dirichlet condition (imposee de maniere faible)
+    //  0.0*(dn(ub)-BoundaryPenaltyConstant*ub)
+    //  + 0.0*(dn(vb)-BoundaryPenaltyConstant*vb)
+    //  );
+    - int1d(Th, surface)
+    (
+     + nu*(uSurface*dn(ub) + 0.0*dn(vb))
+     + BoundaryPenalty*n*uSurface*ub + 0.0*vb //
+    )
+    - int1d(Th, bottom, walls)
+    (
+     + nu*(0.0*dn(ub) + 0.0*dn(vb))
+     + 0.0*ub + 0.0*vb //
      );
 
   problem Stokes([uu,vv,pp], [uub,vvb,ppb]) =
@@ -132,13 +149,13 @@ for(int i=0; i<meshSizes.n; i++) {
     (
      - nu*(dn(uu)*uub + dn(vv)*vvb)
      + nu*(uu*dn(uub) + vv*dn(vvb))
-     + beta*n*(uu*uub + vv*vvb)  // n = 1/(h_e)
+     + BoundaryPenalty*n*(uu*uub + vv*vvb)  // n = 1/(h_e)
     )
     + int1d(Th, bottom, walls)
     (
      - nu*(dn(uu)*uub + dn(vv)*vvb)
      + nu*(uu*dn(uub) + vv*dn(vvb))
-     + beta*n*(uu*uub + vv*vvb)
+     + BoundaryPenalty*n*(uu*uub + vv*vvb)
      )
     // + intalledges(Th) (
     // 		       (nTonEdge==1)*(1.0/hFace)*uu*uub
@@ -164,7 +181,7 @@ for(int i=0; i<meshSizes.n; i++) {
     - int1d(Th, surface)
     (
      + nu*(uSurface*dn(uub) + 0.0*dn(vvb))
-     + beta*n*uSurface*uub + 0.0*vvb //
+     + BoundaryPenalty*n*uSurface*uub + 0.0*vvb //
     )
     - int1d(Th, bottom, walls)
     (
