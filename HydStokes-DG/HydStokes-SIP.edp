@@ -18,10 +18,10 @@ load "Element_P4dc"
 verbosity=0;
 int interactive=1; // If 1: plot results
 
-real PenaltyConstant=5.0e+3; // DG Penalty (to achieve coercivity)
+real PenaltyConstant=5.0e+1; // DG Penalty (to achieve coercivity)
 real nu=1.; // Horizontal viscosity coefficient
 
-real domainEpsilon = 1.e-1; // Domain Epsilon
+real domainEpsilon = 1.e-7; // Domain Epsilon
 real dEpsilon2 = domainEpsilon*domainEpsilon;
 
 // macro hFace() (1.0/sqrt(n)) // An approximation of h_F (length of face)
@@ -30,12 +30,12 @@ macro hFace() (lenEdge) // An approximation of h_F (length of face)
 macro LocalPenalty() (PenaltyConstant/hFace) // EOM
   ;
 
-int [int] meshSizes= [8,16,32];
-
 include "exact-sol-HydStokes-steady.idp"
 func f1 = f1Exact; // RHS / u
 func f2 = f2Exact; // RHS / v
 real pEpsilon  = 1.0e-10; // Penalty epsilon in p-equations
+
+int [int] meshSizes= [8,16,32];
 
 for(int i=0; i<meshSizes.n; i++) {
   int n = meshSizes[i];
@@ -52,9 +52,9 @@ for(int i=0; i<meshSizes.n; i++) {
   func PkDG = P1dc;  // Discontinuous Pk
   func PkCGu = P1b;  // Continous Pk for velocity
   func PkCGp = P1;  // Continous Pk for pressure
-  int qfo = 2*k;  // Order of quadrature formula
-  int qfoV = qfo+1;  // Order of quadrature formula for v integrals
-  int qfoP = qfo+1;  // Order of quadrature formula for pressure integrals
+  int qfo = 2*k+1;  // Order of quadrature formula
+  int qfoV = qfo;  // Order of quadrature formula for v integrals
+  int qfoP = qfo;  // Order of quadrature formula for pressure integrals
 
   // Discontinuous FE
   fespace UhDisc(Th,PkDG);
@@ -168,7 +168,7 @@ for(int i=0; i<meshSizes.n; i++) {
   time0 = clock();
   HydStokesSIP;
   // Force zero mean
-  bool forceZeroMean=true; if(forceZeroMean) {
+  bool forceZeroMean=false; if(forceZeroMean) {
     PhDisc one; one[] = 1.;
     real pMean = int2d(Th)(p)/int2d(Th)(one);
     p = p - pMean;

@@ -191,10 +191,10 @@ for(int i=0; i<meshSizes.n; i++) {
   // dy(uu)*dy(uu) - int2d(Th)(f*uu)) << endl;
 
   // Vh error = u-uExact;
-  real uError = sqrt(int2d(Th)(square(u-uExact(x,y))));
+  real uError = sqrt(int2d(Th)(square(u-uExact(x,y))) + int2d(Th)(square(v-vExact(x,y))));
   real pError = sqrt(int2d(Th)(square(p-pExact(x,y))));
   cout << "DG u/p error L2: " << uError << "/" << pError << "<<***" << endl;
-  real uuError = sqrt(int2d(Th)(square(uu-uExact(x,y))));
+  real uuError = sqrt(int2d(Th)(square(uu-uExact(x,y))) + int2d(Th)(square(vv-vExact(x,y))));
   real ppError = sqrt(int2d(Th)(square(pp-pExact(x,y))));
   cout << "CG u/p error L2: " << uuError << "/" << ppError << endl;
  }
