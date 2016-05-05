@@ -52,8 +52,9 @@ for(int i=0; i<meshSizes.n; i++) {
   func PkDG = P1dc;  // Discontinuous Pk
   func PkCGu = P1b;  // Continous Pk for velocity
   func PkCGp = P1;  // Continous Pk for pressure
-  int qfo = 2*k+1;  // Order of quadrature formula
-  int qfoP = qfo+2;  // Order of quadrature formula for pressure integrals
+  int qfo = 2*k;  // Order of quadrature formula
+  int qfoV = qfo+1;  // Order of quadrature formula for v integrals
+  int qfoP = qfo+1;  // Order of quadrature formula for pressure integrals
 
   // Discontinuous FE
   fespace UhDisc(Th,PkDG);
@@ -93,7 +94,7 @@ for(int i=0; i<meshSizes.n; i++) {
   NewMacro aVSIP(v,vb)
     (
      int2d(Th, qforder=qfo) ( nu*dEpsilon2 * ( dx(v)*dx(vb) + dy(v)*dy(vb) ) )
-     + intalledges(Th, qforder=qfo)
+     + intalledges(Th, qforder=qfoV)
      (
       // dEpsilon2*PenaltyParameter*(jump(v)*jump(vb)) /nTonEdge
       dEpsilon2*( jump(vb)*average(dn(v)) + jump(v)*average(dn(vb)) ) /nTonEdge
@@ -191,12 +192,14 @@ for(int i=0; i<meshSizes.n; i++) {
   // dy(uu)*dy(uu) - int2d(Th)(f*uu)) << endl;
 
   // Vh error = u-uExact;
-  real uError = sqrt(int2d(Th)(square(u-uExact(x,y))));
+  real uError = sqrt(int2d(Th)(square(dx(u)-DXuExact(x,y))));
+  real vError = sqrt(int2d(Th)(square(dy(v)-DYvExact(x,y))));
   real pError = sqrt(int2d(Th)(square(p-pExact(x,y))));
-  cout << "DG u/p error L2: " << uError << "/" << pError << "<<***" << endl;
-  real uuError = sqrt(int2d(Th)(square(uu-uExact(x,y))));
+  cout << "DG u,v/p error L2: " << uError << "," << vError << "/" << pError << "<<***" << endl;
+  real uuError = sqrt(int2d(Th)(square(dx(uu)-DXuExact(x,y))));
+  real vvError = sqrt(int2d(Th)(square(dy(vv)-DYvExact(x,y))));
   real ppError = sqrt(int2d(Th)(square(pp-pExact(x,y))));
-  cout << "CG u/p error L2: " << uuError << "/" << ppError << endl;
+  cout << "CG u,v/p error L2: " << uuError << "," << vvError << "/" << ppError << endl;
 
   bool saveVTK=false; if(saveVTK) {
     load "iovtk";
