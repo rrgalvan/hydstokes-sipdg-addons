@@ -48,8 +48,8 @@ for(int i=0; i<meshSizes.n; i++) {
   func PkDG = P1dc;  // Discontinuous Pk
   func PkCGu = P1b;  // Continous Pk for velocity
   func PkCGp = P1;  // Continous Pk for pressure
-  int qfo = 2*k;  // Order of quadrature formula
-  int qfoP = qfo+1;  // Order of quadrature formula for pressure integrals
+  int qfo = 2*k+1;  // Order of quadrature formula
+  int qfoP = qfo;  // Order of quadrature formula for pressure integrals
 
   // Discontinuous FE
   fespace UhDisc(Th,PkDG);

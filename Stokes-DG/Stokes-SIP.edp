@@ -17,13 +17,13 @@ load "Element_P4dc"
 verbosity=0;
 int interactive=1; // If 1: plot results
 
-real PenaltyConstant=5.0e+3; // Penalty to achieve coercivity
+real SIPPenalty=5.0e+4; // Penalty to achieve coercivity
 real nu=1.;
 
 // macro hFace() (1.0/sqrt(n)) // An approximation of h_F (length of face)
 macro hFace() (lenEdge) // An approximation of h_F (length of face)
   ;
-macro LocalPenalty() (PenaltyConstant/hFace) // EOM
+macro LocalPenalty() (SIPPenalty/hFace) // EOM
   ;
 
 include "exact-sol-Stokes-steady.idp"
@@ -31,6 +31,9 @@ include "exact-sol-Stokes-steady.idp"
 func f1 = f1Exact; // RHS / u
 func f2 = f2Exact; // RHS / v
 real pEpsilon  = 1.0e-10; // Penalty epsilon in p-equations
+
+real[int] uErrL2(2), uErrH1(2), pErrL2(2); // Errors in 2 time steps (for orders)
+real[int] uuErrL2(2), uuErrH1(2), ppErrL2(2); // Errors in 2 time steps (for orders)
 
 int [int] meshSizes= [8,16,32,64];
 
@@ -88,7 +91,7 @@ for(int i=0; i<meshSizes.n; i++) {
       )
      ) EndMacro;
   NewMacro bSIP1(u,v,p)
-    int2d(Th, qforder=qfo)( -p*(div(u,v)) )
+    int2d(Th, qforder=qfoP)( -p*(div(u,v)) )
     EndMacro;
   NewMacro bSIP2(u,v,p)
     intalledges(Th, qforder=qfo)
@@ -191,10 +194,25 @@ for(int i=0; i<meshSizes.n; i++) {
   // dy(uu)*dy(uu) - int2d(Th)(f*uu)) << endl;
 
   // Vh error = u-uExact;
-  real uError = sqrt(int2d(Th)(square(u-uExact(x,y))) + int2d(Th)(square(v-vExact(x,y))));
-  real pError = sqrt(int2d(Th)(square(p-pExact(x,y))));
-  cout << "DG u/p error L2: " << uError << "/" << pError << "<<***" << endl;
-  real uuError = sqrt(int2d(Th)(square(uu-uExact(x,y))) + int2d(Th)(square(vv-vExact(x,y))));
-  real ppError = sqrt(int2d(Th)(square(pp-pExact(x,y))));
-  cout << "CG u/p error L2: " << uuError << "/" << ppError << endl;
+  uErrL2[1] = sqrt(int2d(Th)(square(u-uExact(x,y))) + int2d(Th)(square(v-vExact(x,y))));
+  uErrH1[1] = sqrt(int2d(Th)(square(dx(u)-DXuExact(x,y))) + int2d(Th)(square(dy(u)-DYuExact(x,y))));
+  pErrL2[1] = sqrt(int2d(Th)(square(p-pExact(x,y))));
+  cout << "DG u/p error L2: " << uErrL2[1] << "/" << pErrL2[1] << "<<***" << endl;
+  uuErrL2[1] = sqrt(int2d(Th)(square(uu-uExact(x,y))) + int2d(Th)(square(vv-vExact(x,y))));
+  uuErrH1[1] = sqrt(int2d(Th)(square(dx(uu)-DXuExact(x,y))) + int2d(Th)(square(dy(uu)-DYuExact(x,y))));
+  ppErrL2[1] = sqrt(int2d(Th)(square(pp-pExact(x,y))));
+  cout << "CG u/p error L2: " << uuErrL2[1] << "/" << ppErrL2[1] << endl;
+
+  if(i>0) { // Compute error orders
+    cout << "Convergence rates... " << endl <<
+      " * u, L2 :"   << log(uErrL2[0]/uErrL2[1])/log(2.) << endl <<
+      " * u, H1 :"   << log(uErrH1[0]/uErrH1[1])/log(2.) << endl <<
+      // " * v, L2 :"   << log(vErrL2[0]/vErrL2[1])/log(2.) << endl <<
+      // " * v, H1 :"   << log(vErrH1[0]/vErrH1[1])/log(2.) << endl <<
+      " * p, L2 :"   << log(pErrL2[0]/pErrL2[1])/log(2.) << endl <<
+      endl;
+  }
+  uErrL2[0] = uErrL2[1];
+  uErrH1[0] = uErrH1[1];
+  pErrL2[0] = pErrL2[1];
  }
