@@ -4,7 +4,6 @@
 // Galerkin Methods], Chapter 6
 //
 // J. Rafael Rodr\'iguez Galv\'an
-include "getARGV.idp"
 
 load "Element_P3"
 load "Element_P4"
@@ -15,26 +14,27 @@ load "Element_P4dc"
 // Parameters //
 ////////////////
 
-verbosity = 0;
+verbosity=0;
 int interactive=1; // If 1: plot results
 
-real PenaltyConstant = getARGV("-eta", 5.0e+1); // DG Penalty (to achieve coercivity)
-real nu = getARGV("-nu",1.); // Horizontal viscosity coefficient
+real SIPPenalty=1.0e+2; // Penalty to achieve coercivity in DG SIP forms
+real BoundaryPenalty=1.0e+2; // Penalty for Nitsche method (weak Dirichlet condition)
+real nu=1.0;
 
-real domainEpsilon = getARGV("-eps", 1.e-7); // Domain Epsilon
+real domainEpsilon = 0.e-7;
 real dEpsilon2 = domainEpsilon*domainEpsilon;
 
 // macro hFace() (1.0/sqrt(n)) // An approximation of h_F (length of face)
 macro hFace() (lenEdge) // An approximation of h_F (length of face)
   ;
-macro LocalPenalty() (PenaltyConstant/hFace) // EOM
+macro LocalPenalty() (SIPPenalty/hFace) // EOM
   ;
 
-// real uSurface = 1; // Horizontal surface velocity in cavity test
 func uSurface = x*(1-x); // Horizontal surface velocity in cavity test
-func f1 = 0; // RHS in horizontal momentum equation
-func f2 = 0; // RHS in vertical momentum equation
-real pEpsilon  = 1.0e-5; // Penalty epsilon in p-equations
+// func uSurface=1;
+func f1 = 0; // RHS / u
+func f2 = 0; // RHS / v
+real pEpsilon  = 1.0e-10; // Penalty epsilon in p-equations
 
 int [int] meshSizes= [8,16,32];
 
@@ -54,7 +54,6 @@ for(int i=0; i<meshSizes.n; i++) {
   func PkCGu = P1b;  // Continous Pk for velocity
   func PkCGp = P1;  // Continous Pk for pressure
   int qfo = 2*k+1;  // Order of quadrature formula
-  int qfoV = qfo;  // Order of quadrature formula for v integrals
   int qfoP = qfo;  // Order of quadrature formula for pressure integrals
 
   // Discontinuous FE
@@ -83,27 +82,17 @@ for(int i=0; i<meshSizes.n; i++) {
     ;
   // def: jump = external - internal value; on border exter value =0
   //      average = (external + internal value)/2, on border just internal value
-  NewMacro aUSIP(u,ub)
+  NewMacro aSIP(u, ub, viscosity)
     (
-     int2d(Th, qforder=qfo) ( nu * ( dx(u)*dx(ub) + dy(u)*dy(ub) ) )
+     int2d(Th, qforder=qfo) ( viscosity * ( dx(u)*dx(ub) + dy(u)*dy(ub) ) )
      + intalledges(Th, qforder=qfo)
      (
-      ( jump(ub)*average(dn(u)) + jump(u)*average(dn(ub)) ) /nTonEdge
-      + LocalPenalty*(jump(u)*jump(ub))
-      )
-     ) EndMacro;
-  NewMacro aVSIP(v,vb)
-    (
-     int2d(Th, qforder=qfo) ( nu*dEpsilon2 * ( dx(v)*dx(vb) + dy(v)*dy(vb) ) )
-     + intalledges(Th, qforder=qfoV)
-     (
-      // dEpsilon2*PenaltyParameter*(jump(v)*jump(vb)) /nTonEdge
-      dEpsilon2*( jump(vb)*average(dn(v)) + jump(v)*average(dn(vb)) ) /nTonEdge
-      + LocalPenalty*(jump(v)*jump(vb))
+      - viscosity * ( jump(ub)*average(dn(u)) + jump(u)*average(dn(ub)) ) /nTonEdge
+      + (LocalPenalty)*(jump(u)*jump(ub))
       )
      ) EndMacro;
   NewMacro bSIP1(u,v,p)
-    int2d(Th, qforder=qfo)( -p*(div(u,v)) )
+    int2d(Th, qforder=qfoP)( -p*(div(u,v)) )
     EndMacro;
   NewMacro bSIP2(u,v,p)
     intalledges(Th, qforder=qfo)
@@ -121,26 +110,32 @@ for(int i=0; i<meshSizes.n; i++) {
   //////////////////////////////
 
   problem HydStokesSIP([u,v,p], [ub,vb,pb]) =
-    aUSIP(u,ub) + aVSIP(v,vb) // Bilinear form a(.,.)
+    aSIP(u, ub, nu) + aSIP(v, vb, nu*dEpsilon2) // Bilinear form a(.,.)
     + bSIP1(ub,vb,p) + bSIP2(ub,vb,p) // Bilinear form b(.,.)
     - bSIP1(u,v,pb) - bSIP2(u,v,pb) // Bilinear form b(.,.)
     + sSIP(p, pb) // Stabilization
     + int2d(Th)(pEpsilon*p*pb)
-    - int2d(Th)
+    + int1d(Th, surface, bottom, walls, qforder=qfoP)
     (
-     + f1 * ub
-     + f2 * vb
+     - nu*dn(u)*ub - (nu*dEpsilon2)*dn(v)*vb
      )
+    + int1d(Th, surface, bottom, walls)
+    (
+     + nu*u*dn(ub) + (nu*dEpsilon2)*v*dn(vb)
+     + (BoundaryPenalty/hFace)*(u*ub + v*vb)  // $n \approx 1/(h_e)$
+     )
+    /////////
+    // RHS //
+    /////////
+    - int2d(Th) (
+		 + f1 * ub
+		 + f2 * vb
+		 )
     + int1d(Th, surface)
-    ( // Dirichlet condition (imposee de maniere faible)
-     uSurface*(dn(ub)-LocalPenalty*ub)
-     + 0.0*dEpsilon2*(dn(vb)-LocalPenalty*vb)
-     )
-    + int1d(Th, bottom, walls)
-    ( // Dirichlet condition (imposee de maniere faible)
-     0.0*(dn(ub)-LocalPenalty*ub)
-     + 0.0*dEpsilon2*(dn(vb)-LocalPenalty*vb)
-      );
+    (
+     - nu*uSurface*dn(ub)
+     - (BoundaryPenalty/hFace)*(uSurface*ub)  // $n \approx 1/(h_e)$
+     );
 
   problem HydStokes([uu,vv,pp], [uub,vvb,ppb]) =
     int2d(Th) (
@@ -210,17 +205,17 @@ for(int i=0; i<meshSizes.n; i++) {
   real pCG = sqrt(int2d(Th)(square(p)));
   cout << " Pressure (squared norm)....... CG/DG: " << pCG << " / " << pDG << endl;
 
-  bool saveVTK=getARGV("-vtk", 0); if(saveVTK) {
+  bool saveVTK=1; if(saveVTK) {
     load "iovtk";
     savevtk("/tmp/DG-HydStokes-solution" + n + ".vtk",
 	    Th,
 	    [u,v,0],
 	    p,
-	    dataname="Velocity Pressure") ;
+	    dataname="Velocity_DG Pressure_DG") ;
     savevtk("/tmp/CG-HydStokes-solution" + n + ".vtk",
 	    Th,
 	    [uu,vv,0],
 	    pp,
-	    dataname="Velocity Pressure") ;
+	    dataname="Velocity_CG Pressure_CG") ;
   }
  }

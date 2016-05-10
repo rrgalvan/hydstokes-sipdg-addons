@@ -10,15 +10,15 @@ load "Element_P4"
 load "Element_P3dc"
 load "Element_P4dc"
 
-////////////////
+////////////////-
 // Parameters //
 ////////////////
 
 verbosity=0;
 int interactive=1; // If 1: plot results
 
-real SIPPenalty=5.0e+4; // Penalty to achieve coercivity in DG SIP forms
-real BoundaryPenalty=1.0e+1; // Penalty for Nitsche trick (weak Dirichlet condition)
+real SIPPenalty=1.0e+2; // Penalty to achieve coercivity in DG SIP forms
+real BoundaryPenalty=3.0e+2; // Penalty for Nitsche method (weak Dirichlet condition)
 real nu=1.0;
 
 // macro hFace() (1.0/sqrt(n)) // An approximation of h_F (length of face)
@@ -27,8 +27,8 @@ macro hFace() (lenEdge) // An approximation of h_F (length of face)
 macro LocalPenalty() (SIPPenalty/hFace) // EOM
   ;
 
-// func uSurface = x*(1-x); // Horizontal surface velocity in cavity test
-func uSurface=1;
+func uSurface = x*(1-x); // Horizontal surface velocity in cavity test
+// func uSurface=1;
 func f1 = 0; // RHS / u
 func f2 = 0; // RHS / v
 real pEpsilon  = 1.0e-10; // Penalty epsilon in p-equations
@@ -50,8 +50,8 @@ for(int i=0; i<meshSizes.n; i++) {
   func PkDG = P1dc;  // Discontinuous Pk
   func PkCGu = P1b;  // Continous Pk for velocity
   func PkCGp = P1;  // Continous Pk for pressure
-  int qfo = 2*k;  // Order of quadrature formula
-  int qfoP = qfo+1;  // Order of quadrature formula for pressure integrals
+  int qfo = 2*k+1;  // Order of quadrature formula
+  int qfoP = qfo;  // Order of quadrature formula for pressure integrals
 
   // Discontinuous FE
   fespace UhDisc(Th,PkDG);
@@ -84,7 +84,7 @@ for(int i=0; i<meshSizes.n; i++) {
      int2d(Th, qforder=qfo) ( nu * ( dx(u)*dx(ub) + dy(u)*dy(ub) ) )
      + intalledges(Th, qforder=qfo)
      (
-      ( jump(ub)*average(dn(u)) + jump(u)*average(dn(ub)) ) /nTonEdge
+      - ( jump(ub)*average(dn(u)) + jump(u)*average(dn(ub)) ) /nTonEdge
       + (LocalPenalty)*(jump(u)*jump(ub))
       )
      ) EndMacro;
@@ -118,7 +118,7 @@ for(int i=0; i<meshSizes.n; i++) {
      )
     + int1d(Th, surface, bottom, walls)
     (
-     - nu*(u*dn(ub) + v*dn(vb))
+     + nu*(u*dn(ub) + v*dn(vb))
      + (BoundaryPenalty/hFace)*(u*ub + v*vb)  // $n \approx 1/(h_e)$
      )
     /////////
@@ -130,7 +130,8 @@ for(int i=0; i<meshSizes.n; i++) {
 		 )
     + int1d(Th, surface)
     (
-     nu*(uSurface*dn(ub))
+     - nu*uSurface*dn(ub)
+     - (BoundaryPenalty/hFace)*(uSurface*ub)  // $n \approx 1/(h_e)$
      );
 
   problem Stokes([uu,vv,pp], [uub,vvb,ppb]) =
