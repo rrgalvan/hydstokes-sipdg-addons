@@ -24,8 +24,8 @@ macro hFace() (lenEdge) // An approximation of h_F (length of face)
 macro LocalPenalty() (SIPPenalty/hFace) // EOM
   ;
 
-// func uSurface = x*(1-x); // Horizontal surface velocity in cavity test
-func uSurface=1;
+func uSurface = x*(1-x); // Horizontal surface velocity in cavity test
+// func uSurface=1;
 func f1 = 0; // RHS / u
 func f2 = 0; // RHS / v
 real pEpsilon  = 1.0e-10; // Penalty epsilon in p-equations
@@ -184,12 +184,12 @@ for(int i=0; i<meshSizes.n; i++) {
 	    Th,
 	    [u,v,0],
 	    p,
-	    dataname="Velocity Pressure") ;
+	    dataname="Velocity_DG Pressure_DG") ;
     savevtk("/tmp/CG-Stokes-solution" + n + ".vtk",
 	    Th,
 	    [uu,vv,0],
 	    pp,
-	    dataname="Velocity Pressure") ;
+	    dataname="Velocity_CG Pressure_CG") ;
   }
 
   //////////////
