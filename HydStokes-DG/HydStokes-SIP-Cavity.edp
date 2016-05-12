@@ -5,11 +5,6 @@
 //
 // J. Rafael Rodr\'iguez Galv\'an
 
-load "Element_P3"
-load "Element_P4"
-load "Element_P3dc"
-load "Element_P4dc"
-
 ////////////////
 // Parameters //
 ////////////////
