@@ -12,8 +12,6 @@
 verbosity=0;
 int interactive=1; // If 1: plot results
 
-// real SIPPenalty=1.0e+2; // Penalty to achieve coercivity in DG SIP forms
-// real BoundaryPenalty=3.0e+2; // Penalty for Nitsche method (weak Dirichlet condition)
 real SIPPenalty=1.0e+2; // Penalty to achieve coercivity in DG SIP forms
 real BoundaryPenalty=3.0e+2; // Penalty for Nitsche method (weak Dirichlet condition)
 real nu=1.0;

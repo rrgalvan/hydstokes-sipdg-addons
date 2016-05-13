@@ -13,7 +13,7 @@ verbosity=0;
 int interactive=1; // If 1: plot results
 
 real SIPPenalty=1.0e+2; // Penalty to achieve coercivity in DG SIP forms
-real BoundaryPenalty=1.0e+2; // Penalty for Nitsche method (weak Dirichlet condition)
+real BoundaryPenalty=3.0e+2; // Penalty for Nitsche method (weak Dirichlet condition)
 real nu=1.0;
 
 real domainEpsilon = 0.e-7;
@@ -79,23 +79,23 @@ for(int i=0; i<meshSizes.n; i++) {
   //      average = (external + internal value)/2, on border just internal value
   NewMacro aSIP(u, ub, viscosity)
     (
-     int2d(Th, qforder=qfo) ( viscosity * ( dx(u)*dx(ub) + dy(u)*dy(ub) ) )
-     + intalledges(Th, qforder=qfo)
+     int2d(Th) ( viscosity * ( dx(u)*dx(ub) + dy(u)*dy(ub) ) )
+     + intalledges(Th)
      (
       - viscosity * ( jump(ub)*average(dn(u)) + jump(u)*average(dn(ub)) ) /nTonEdge
       + (LocalPenalty)*(jump(u)*jump(ub))
       )
      ) EndMacro;
   NewMacro bSIP1(u,v,p)
-    int2d(Th, qforder=qfoP)( -p*(div(u,v)) )
+    int2d(Th)( -p*(div(u,v)) )
     EndMacro;
   NewMacro bSIP2(u,v,p)
-    intalledges(Th, qforder=qfo)
+    intalledges(Th)
     (
      (jump(u)*N.x + jump(v)*N.y)*average(p) /nTonEdge
      ) EndMacro;
   NewMacro sSIP(q,r)
-    intalledges(Th, qforder=qfoP)
+    intalledges(Th)
     (
      (nTonEdge-1)*hFace*jump(q)*jump(r)
      ) EndMacro;
@@ -110,26 +110,20 @@ for(int i=0; i<meshSizes.n; i++) {
     - bSIP1(u,v,pb) - bSIP2(u,v,pb) // Bilinear form b(.,.)
     + sSIP(p, pb) // Stabilization
     + int2d(Th)(pEpsilon*p*pb)
-    + int1d(Th, surface, bottom, walls, qforder=qfoP)
+    + int1d(Th, surface, bottom, walls)
     (
      - nu*dn(u)*ub - (nu*dEpsilon2)*dn(v)*vb
      )
     + int1d(Th, surface, bottom, walls)
     (
      + nu*u*dn(ub) + (nu*dEpsilon2)*v*dn(vb)
-     + (BoundaryPenalty/hFace)*(u*ub + v*vb)  // $n \approx 1/(h_e)$
+     + (BoundaryPenalty/hFace)*(u*ub + v*vb)
      )
-    /////////
     // RHS //
-    /////////
-    - int2d(Th) (
-		 + f1 * ub
-		 + f2 * vb
-		 )
     + int1d(Th, surface)
     (
      - nu*uSurface*dn(ub)
-     - (BoundaryPenalty/hFace)*(uSurface*ub)  // $n \approx 1/(h_e)$
+     - (BoundaryPenalty/hFace)*uSurface*ub
      );
 
   problem HydStokes([uu,vv,pp], [uub,vvb,ppb]) =
@@ -141,17 +135,23 @@ for(int i=0; i<meshSizes.n; i++) {
 	       + nu*div(uu,vv)*dy(vvb) // dz(v) stabilization term
 	       + pEpsilon*pp*ppb
 	       )
-    - int2d(Th) (
-		 + f1 * uub
-		 + f2 * vvb
-		 )
-    // + int1d(Th, bottom, walls, surface)
-    // (
-    //  uExact(x,y)*(dn(uub)-LocalPenalty*uub) // Dirichlet condition (imposee de maniere faible)
-    //  + vExact(x,y)*(dn(vvb)-LocalPenalty*vvb) // Dirichlet condition (imposee de maniere faible)
-    //  );
-    + on(surface, uu=uSurface, vv=0.0)
-    + on(bottom, walls, uu=0.0, vv=0.0);
+    + int1d(Th, surface, bottom, walls)
+    (
+     - nu*(dn(uu)*uub + dn(vv)*vvb)
+     )
+    + int1d(Th, surface, bottom, walls)
+    (
+     - nu*(uu*dn(uub) + vv*dn(vvb))
+     + BoundaryPenalty/hFace*(uu*uub + vv*vvb)
+     )
+    // RHS //
+    + int1d(Th, surface)
+    (
+     + nu*uSurface*dn(uub)
+     - (BoundaryPenalty/hFace)*uSurface*uub
+     )
+    + on(bottom, uu=0, vv=0)
+    ;
 
   //////////////
   // Solve DG //
@@ -160,7 +160,7 @@ for(int i=0; i<meshSizes.n; i++) {
   time0 = clock();
   HydStokesSIP;
   // Force zero mean
-  bool forceZeroMean=true; if(forceZeroMean) {
+  bool forceZeroMean=false; if(forceZeroMean) {
     PhDisc one; one[] = 1.;
     real pMean = int2d(Th)(p)/int2d(Th)(one);
     p = p - pMean;
@@ -197,10 +197,10 @@ for(int i=0; i<meshSizes.n; i++) {
   real kinCG = sqrt(int2d(Th)(square(uu)+square(vv)));
   cout << " Kinetic Energy................ CG/DG: " << kinCG << " / " << kinDG << endl;
   real pDG = sqrt(int2d(Th)(square(p)));
-  real pCG = sqrt(int2d(Th)(square(p)));
+  real pCG = sqrt(int2d(Th)(square(pp)));
   cout << " Pressure (squared norm)....... CG/DG: " << pCG << " / " << pDG << endl;
 
-  bool saveVTK=1; if(saveVTK) {
+  bool saveVTK=true; if(saveVTK) {
     load "iovtk";
     savevtk("/tmp/DG-HydStokes-solution" + n + ".vtk",
 	    Th,
