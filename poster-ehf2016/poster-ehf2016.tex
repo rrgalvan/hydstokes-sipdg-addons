@@ -15,8 +15,8 @@ blockverticalspace=15mm, colspace=15mm, subcolspace=8mm]{tikzposter}
   Hydrostatic Stokes {\Large Equations}}
 \author{F. Guillén González$^\dagger$, M.V. Redondo Neble$^\star$,
   J.R. Rodríguez Galván$^\star$}
-\institute{\large $^\dagger$Departamento E.D.A.N.,
-  Univ. Sevilla. $^\star$Departamnto de Matemáticas, Univ. Cádiz}
+\institute{\large $^\dagger$Departamento EDAN and IMUS,
+  Univ. Sevilla. $^\star$Departamnto de Matemáticas, Univ. Cádiz.}
 
 % ======================================================================%
 \begin{document}
@@ -113,7 +113,7 @@ blockverticalspace=15mm, colspace=15mm, subcolspace=8mm]{tikzposter}
     on a penalty parameter $\mu>0$):
     $$
     a_h(\wh,\bwh) = \nu\sum_{i=1}^{d-1} a^{\text{sip}, \mu}(u_{h,i},\overline
-    u_{h,i}) + \varepsilon^2 \,a^{\text{sip}, \mu/\varepsilon^2}(\vv,\bvh)
+    u_{h,i}) + \varepsilon^2 \,a^{\text{sip}, \mu/\varepsilon^2}(\vv,\bvh),
     $$
     where $a^{\text{sip}, \mu}$ is the well-known symmetric IP
     bilinear form,
@@ -165,7 +165,7 @@ blockverticalspace=15mm, colspace=15mm, subcolspace=8mm]{tikzposter}
     Consider the standard IP velocity-pressure bilinear form,
     $$
     b_h(\wh, \ph )= -\int_{\Omega} \ph\, \gradh \cdot \wh +
-    \sum_{e\in\Eh} \int_e \jump{\wh} \cdot n_e\, \average{\ph},
+    \sum_{e\in\Eh} \int_e \jump{\wh} \cdot n_e\, \average{\ph}
     $$
     and pressure seminorm, defined in
     $ H^1(\Th ) \supset P_{k}( \Th )$:
@@ -179,7 +179,7 @@ blockverticalspace=15mm, colspace=15mm, subcolspace=8mm]{tikzposter}
       $$
       \beta \, \| \ph \|_{L^2(\Omega)} \le \sup_{\wh \in \Wh \setminus
         \{0\}} \frac{b_h ( \wh, \ph )}{\normvel{\wh}}
-      + |\ph|_P , \qquad \forall \ph \in \Ph
+      + |\ph|_P , \quad \forall \ph \in \Ph.
       $$
     \end{lemma}
 
@@ -248,21 +248,21 @@ blockverticalspace=15mm, colspace=15mm, subcolspace=8mm]{tikzposter}
     programmed in \textbf{FreeFem++}~\cite{FreeFem++}, using the
     following data:
     \begin{itemize}
-    \item Physical domain V/H ratio: $\eps=10^{-7}$
-    \item Viscosity: $\nu=1$;
+    \item Physical domain V/H ratio: $\eps=10^{-7}$.
+    \item Viscosity: $\nu=1$.
     \item RHS functions: $\ff=0$, $g=0$.
 
     \item FE discretization:
       \begin{itemize}
       \item Admiensional domain $\Omega=[0,1]^2$, structured
-        $32\times 32$ mesh ($h \sim 10^{-2}$)
-      \item $P_1$ elements for velocity \& pressure
+        $32\times 32$ mesh ($h \sim 10^{-2}$).
+      \item $P_1$ elements for velocity \& pressure.
       \end{itemize}
-    \item Dirichlet boundary conditions (B.C.): Let
-      $\Gamma_S=\mbox{surface boundary}$,
+    \item Dirichlet boundary conditions (B.C.). Let
+      $\Gamma_S=\mbox{surface boundary}$, we take:
       \begin{itemize}
-      \item $u=x(x-1)$ on $\Gamma_S$
-      \item $u=0$ on $\partial\Omega \setminus \Gamma_S$.
+      \item $u=x(x-1)$ on $\Gamma_S$,
+      \item $u=0$ on $\partial\Omega \setminus \Gamma_S$,
       \item $v=0$ on $\partial\Omega$.
       \end{itemize}
     % \item pEpsilon  = 1.0e-10; // Penalty epsilon in p-equations
@@ -270,16 +270,16 @@ blockverticalspace=15mm, colspace=15mm, subcolspace=8mm]{tikzposter}
     method.
 
   \item \textit{How to determinate adequate IP and B.C. (Nitsche)
-      penalty parameters?}:
+      penalty parameters?}
     \begin{center}
       \textbf{\textit{Not easy!}}
     \end{center}
     We set:
     \begin{itemize}
-    \item IP Penalty parameter\dotfill $\mu=10^{2}$
-    \item B.C. Penalty\dotfill $\eta = 10^{2}$
+    \item IP Penalty parameter\dotfill $\mu=10^{2}$,
+    \item B.C. Penalty\dotfill $\eta = 10^{2}$.
     \end{itemize}
-    \end{itemize}
+  \end{itemize}
 
     \begin{tabular}{@{}c@{}}
       \includegraphics[width=1.0\linewidth]{hydstokes-DG-cavity-vel}
