@@ -11,7 +11,7 @@ blockverticalspace=15mm, colspace=15mm, subcolspace=8mm]{tikzposter}
 
 \setlength{\columnsep}{1.66em} % This is the default columnsep for all pages
 
-\title{Stable Discontinuous Galerkin Approximations {\Large of the}
+\title{Stable Discontinuous Galerkin Approximations {\Large for the}
   Hydrostatic Stokes {\Large Equations}}
 \author{F. Guillén González$^\dagger$, M.V. Redondo Neble$^\star$,
   J.R. Rodríguez Galván$^\star$}
@@ -28,7 +28,7 @@ blockverticalspace=15mm, colspace=15mm, subcolspace=8mm]{tikzposter}
   % ======================================================================%
   \begin{multicols*}{3}
     \setlength{\parskip}{0.33\baselineskip}
-    \textbf{Anisotropic Stokes (in particular, Hydrostatic) equations} are
+    \textbf{Anisotropic Stokes (and Hydrostatic) equations} are
     the centerpiece for more complex models in Oceanography in large
     scale domains, where
     $$
@@ -37,7 +37,7 @@ blockverticalspace=15mm, colspace=15mm, subcolspace=8mm]{tikzposter}
     $$
 
     \begin{equation}
-      \tag{HydStokes}
+      \tag{AnisStokes}
       \left\{\;
         \begin{aligned}
           \dt\uu - \nu\Delta\uu + \gradx\pp &= \ff, \quad \text{in } \Omega,
@@ -47,21 +47,21 @@ blockverticalspace=15mm, colspace=15mm, subcolspace=8mm]{tikzposter}
           \divx\uu +  \partial_z\vv &= 0, \quad \text{in } \Omega.
         \end{aligned}
       \right.
-      \label{eq:hydstokes}
+      \label{eq:anistokes}
     \end{equation}
 
-    In particular, the limit case, $ \eps=0 $ (the hydrostatic case)
-    gives rise to the well known \textit{Primitive Equations of the
-      ocean}.
-    Their approximation has been studied by the authors
+    In particular, the limit case, $ \eps=0 $ (the hydrostatic Stokes
+    problem) gives rise to the well known \textit{Primitive Equations
+      of the ocean}.  The approximation of~(\ref{eq:anistokes}) has
+    been studied by the authors
     in~\cite{Guillen-Redondo:16,Guillen-RRGalvan:hydrostatic:NUMAT:15,Guillen-RRGalvan:stabilized:SINUM:15,Guillen-RRGalvan:stokes:APNUM:16}.
-    In the three later ones, two underlying \textbf{inf-sup constraints}
-    for~(\ref{eq:hydstokes}) were shown:
+    In the three later ones, two underlying \textbf{inf-sup
+      constraints} for~(\ref{eq:anistokes}) were shown:
 
     \begin{enumerate}
-    \item A \textbf{LBB-like inf-sup} constraint.
+    \item The well-know \textbf{LBB-like inf-sup} condition for Stokes
     \item A new \textbf{Hydrostatic inf-sup} constraint, related to the
-      vertical anisotropy of~(\ref{eq:hydstokes}):
+      vertical velocity of~(\ref{eq:anistokes}):
       \begin{equation}
         \tag*{\ensuremath{(IS)^\VV}}
         \sup_{0\neq \pp \in \PP}
@@ -73,13 +73,13 @@ blockverticalspace=15mm, colspace=15mm, subcolspace=8mm]{tikzposter}
       \end{equation}
     \end{enumerate}
 
-    In order to \textbf{avoid these constraints}, making possible the use of
-    standard finite elements for~(\ref{eq:hydstokes}), different
+    In order to \textbf{avoid the last constraint}, making possible the use of
+    standard finite elements for~(\ref{eq:anistokes}), different
     techniques are proposed
     in~\cite{Guillen-RRGalvan:hydrostatic:NUMAT:15,Guillen-RRGalvan:stabilized:SINUM:15,Guillen-RRGalvan:stokes:APNUM:16}.
 
     \textbf{Here we show a different technique}, based in DG methods
-    which verify the above inf-sup restrictions.
+    which satisfy the above inf-sup restrictions.
   \end{multicols*}
 }
 
@@ -89,7 +89,7 @@ blockverticalspace=15mm, colspace=15mm, subcolspace=8mm]{tikzposter}
     \setlength{\parskip}{0.33\baselineskip}
     We consider Interior Penalty
     (IP) methods that, for second order elliptic equations, were
-    introduced by \cite{arnold_interior_1982} and for the isotropic
+    introduced in \cite{arnold_interior_1982} and for the isotropic
     Stokes equations (i.e.~for $\varepsilon=1$) have been recently
     studied by different authors (see e.g.~\cite{di_pietro_ern_2012}
     and references therein).
@@ -124,7 +124,7 @@ blockverticalspace=15mm, colspace=15mm, subcolspace=8mm]{tikzposter}
       &+ \jump{\vv} \average{\gradh\bv}\cdot n_e \Big)
       + \mu\sum_{e\in\Eh} \frac{1}{h_e} \int_e \jump{\vv}\jump{\bv}.
     \end{align*}
-    Here, $ \nabla_h$ denotes the broken (defined in elements)
+    Here, $ \nabla_h$ denotes the broken (defined by elements)
     divergence operator, $\jump{\cdot}$ and $\average{\cdot}$ are the
     jump and average operators on the edges (or faces), denoted
     $e\in\Eh$.
@@ -155,9 +155,8 @@ blockverticalspace=15mm, colspace=15mm, subcolspace=8mm]{tikzposter}
 
     \begin{paragraph}{\textsc{Remark}}
       Lemma~\ref{lemma:a_h-partial-coercivity} does not provide
-      control for $\|\partial_{z,h} \vh\|_{L^2(\Omega)}$ (and then for
-      $\|\cdot\|_\mathrm{vel}$). It shall be recovered in
-      Theorem~\ref{thm:discrete-inf-sup-stability}.
+      control for $\|\partial_{z,h} \vh\|_{L^2(\Omega)}$. It shall be
+      recovered in Theorem~\ref{thm:discrete-inf-sup-stability}.
     \end{paragraph}
 
     \section{\color{colorTwo}Velocity-Pressure  Coupling\dotfill}
@@ -185,7 +184,7 @@ blockverticalspace=15mm, colspace=15mm, subcolspace=8mm]{tikzposter}
 
     \section{\color{colorTwo}Discrete Problem and Well-Posedness \dotfill}
 
-    We consider the discrete formulation for~(\ref{eq:hydstokes}):
+    We consider the discrete formulation for~(\ref{eq:anistokes}):
     find $(\wh, \ph) \in \Wh \times \Ph$ such that, $\forall \bwh\in\Wh,\ \bph\in\Ph$,
     \begin{equation}
       \tag{P}
@@ -217,9 +216,8 @@ blockverticalspace=15mm, colspace=15mm, subcolspace=8mm]{tikzposter}
     % forms
     \begin{theorem}[Discrete inf-sup stability]
       \label{thm:discrete-inf-sup-stability}
-      Assume that the
-      penalty parameter $\mu$ in $a_h(\cdot,\cdot)$ is such that
-      $ \mu > \overline{\mu}$. Then, there exists $\gamma >0$
+      There exists $\overline{\mu}>0$ such that, for any
+      $ \mu > \overline{\mu}$, exists $\gamma >0$
       independent of $h$ and $\varepsilon$ such that, for all
       $(\wh, \ph) \in \Xh= \Uh\times\Vh\times\Ph$, one has
       $$
@@ -234,7 +232,7 @@ blockverticalspace=15mm, colspace=15mm, subcolspace=8mm]{tikzposter}
       $\normsip{\uh}^2$ and $\seminormJ{\vh}^2$.
     \item Lemma~\ref{lemma:b_h-stability} provides control of
       $\|p_h\|_{L^2(\Omega)}$.
-    \item Discrete inf-sup condition~\ref{eq:ISv} is verified for
+    \item Discrete inf-sup condition~\ref{eq:ISv} is satisfied for
       $P_k$ elements, hence one has control of
       $\|\partial_{z,h} \vh\|_{L^2(\Omega)}$.
      \hfill$\blacksquare$
