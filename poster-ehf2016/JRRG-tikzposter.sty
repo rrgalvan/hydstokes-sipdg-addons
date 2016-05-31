@@ -1,0 +1,233 @@
+%
+% Tikzposter theme.
+%
+% Based on http://tex.stackexchange.com/questions/270264/customizing-block-style-in-tikzposter
+%
+
+\makeatletter
+\def\title#1{\gdef\@title{\scalebox{\TP@titletextscale}{%
+\begin{minipage}[t]{\linewidth}
+\centering
+#1
+\par
+\end{minipage}%
+}}}
+\makeatother
+
+\makeatletter
+%\input{theguy40pt.clo}
+\makeatother
+
+\tikzposterlatexaffectionproofoff
+
+\geometry{hoffset=15mm}
+
+
+%%%%%%%%%%
+% FONTS %
+%%%%%%%%%%
+
+\RequirePackage{eulervm} % Euler math fonts
+
+%% XeLaTeX fonts: (comment out if you don't use XeLaTeX)
+\RequirePackage[no-math]{fontspec}
+\setmainfont[Numbers=OldStyle]{TeX Gyre Pagella} % Palatino like font
+
+%\setromanfont{Georgia} % Roman text font
+% \setsansfont{Tahoma} % Sans tex font
+
+%% Default font: lmodern, doesn't require fontspec % solves some default warnings
+%\usepackage{lmodern}
+
+\defaultfontfeatures{Mapping=tex-text}  % This seems to be important for mapping glyphs properly
+
+\usepackage{multicol}
+% \setlength\columnsep{90pt} % This is the default columnsep for all pages
+\setlength{\columnsep}{3cm} % This is the default columnsep for all pages
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% CUSTOM STYLES
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% COLOR PALLETTE
+\definecolorpalette{jrrg} {
+\definecolor{colorOne}{RGB}{0,69,138}
+\definecolor{colorTwo}{RGB}{186,69,0}
+\definecolor{colorThree}{named}{black}
+}
+
+%% COLOR STYLW
+\definecolorstyle{jrrg} {
+  % colorOne
+% \definecolor{colorOne}{RGB}{20,70,120}
+% \definecolor{colorOne}{RGB}{84,129,172}
+% \definecolor{colorOne}{RGB}{56,86,114}
+\definecolor{colorOne}{RGB}{64,90,114}
+%colorTwo
+%\definecolor{colorTwo}{RGB}{220,83,0}
+%\definecolor{colorTwo}{RGB}{200,85,0}
+% \definecolor{colorTwo}{RGB}{20,85,0}
+\definecolor{colorTwo}{RGB}{190,110,40}
+\definecolor{colorThree}{named}{black}
+}{
+% Background Colors
+\colorlet{backgroundcolor}{white}
+\colorlet{framecolor}{red}
+% Title Colors
+\colorlet{titlebgcolor}{white}
+\colorlet{titlefgcolor}{colorOne}
+% Block Colors
+\colorlet{blocktitlebgcolor}{black}
+\colorlet{blocktitlefgcolor}{colorTwo}
+\colorlet{blockbodybgcolor}{white}
+\colorlet{blockbodyfgcolor}{colorOne}
+% Innerblock Colors
+\colorlet{innerblocktitlebgcolor}{colorOne}
+\colorlet{innerblocktitlefgcolor}{white}
+\colorlet{innerblockbodybgcolor}{white}
+\colorlet{innerblockbodyfgcolor}{colorOne}
+% Note colors
+\colorlet{notefgcolor}{colorOne}
+\colorlet{notebgcolor}{colorTwo!50!white}
+\colorlet{noteframecolor}{white}
+}
+
+%% TITLE STYLE
+\definetitlestyle{jrrg}{
+  width=820mm, roundedcorners=0, linewidth=0pt, innersep=8mm,
+  titletotopverticalspace=9cm, titletoblockverticalspace=10mm,
+  titlegraphictotitledistance=20pt
+}{
+  \begin{scope}
+    \node[anchor=north west, inner sep=0] (jrrg) at (22.5cm,57cm) {\includegraphics[width=0.19\textwidth]{ehf-gijon.png}};
+    \draw [anchor=north east, rounded corners=270pt,line width = 10pt, color=colorTwo]  (jrrg.south west) ++(-20pt,59pt) -| ++(-1800pt,-3209pt);
+    \draw [anchor=north west, rounded corners=50pt,line width = 17pt, color=colorOne]  (jrrg.south west) ++(-20pt,20pt) -| ++(-1760pt,-3170pt);
+  \end{scope}
+}
+
+\defineblockstyle{jrrg}{
+  titlewidthscale=1, bodywidthscale=1, titleleft,
+  titleoffsetx=0pt, titleoffsety=0pt, bodyoffsetx=5pt, bodyoffsety=1cm,
+  bodyverticalshift=0pt, roundedcorners=0, linewidth=0.2cm,
+  titleinnersep=1cm, bodyinnersep=1cm
+}{
+}
+
+\definelayouttheme{jrrg}{
+  \usecolorstyle{jrrg}
+  \usebackgroundstyle{Default}
+  \usetitlestyle{jrrg}
+  \useblockstyle{jrrg}
+  \useinnerblockstyle{Default}
+  \usenotestyle{Default}
+}
+
+\usetheme{jrrg}
+
+\settitle{
+  \centering
+  \vbox{
+    \centering
+    \color{titlefgcolor}
+    {\Huge \textbf{\textsc{\addfontfeatures{Scale=1}{\addfontfeatures{FakeStretch=0.9}\@title}}} \par}
+    \vspace*{1.0em}
+    {\Large \@author \par}
+    \vspace*{0.9em}
+    {\scriptsize \@institute}
+  }
+}
+
+
+%% START OF NEW CODE
+\makeatletter
+\def\thickrulefill{\leavevmode\leaders\hrule height 10pt\hfill\kern\z@}
+\renewcommand\block[3][]{  % #1 keys   #2 title   #3 text
+    % Block position
+    \normalsize
+    \ifTP@subcolumnEnvironment
+        \TP@blocktitlewidth=\subcolwidth
+        \TP@blockbodywidth=\subcolwidth
+        \TP@blockcenter=\TP@subcolcenter
+    \else
+        \ifTP@columnEnvironment
+            \TP@blocktitlewidth=\colwidth
+            \TP@blockbodywidth=\colwidth
+            \TP@blockcenter=\TP@colcenter
+        \else
+            \setlength\TP@blocktitlewidth{\TP@visibletextwidth}
+            \setlength\TP@blockbodywidth{\TP@visibletextwidth}
+            \TP@blockcenter=0pt
+        \fi
+    \fi
+
+    % Set parameter
+    \setkeys{block}{#1}
+
+    % Settings for Subcolumns
+    \ifTP@subcolumnEnvironment \else \ifTP@columnEnvironment \else
+        \setlength\TP@blocktitlewidth{\TP@blocktitlewidth-\blocklinewidth}
+        \setlength\TP@blockbodywidth{\TP@blockbodywidth-\blocklinewidth}
+        \TP@blockcenter=0pt
+    \fi \fi
+
+    % Get height of title
+    \ifstrempty{#2}{
+        \BlockHasTitlefalse
+        \setlength{\TP@blocktitleheight}{0pt}
+    }{
+        \BlockHasTitletrue
+        \setbox\TP@blocktitlebox=\hbox{%
+            \pgfinterruptpicture%
+            \parbox{\TP@blocktitlewidth-2\TP@blocktitleinnersep}{%
+                \bf\LARGE\color{blocktitlefgcolor}\TP@blocktitleAlignment#2 \thickrulefill\par\normalsize}%
+            \endpgfinterruptpicture%
+        }%
+        \setlength{\TP@blocktitleheight}{\ht\TP@blocktitlebox + \dp\TP@blocktitlebox +2\TP@blocktitleinnersep}
+    }
+
+    % Get height of body
+    \setbox\TP@blockbodybox=\hbox{
+        \pgfinterruptpicture%
+        \parbox{\TP@blockbodywidth-2\TP@blockbodyinnersep-\TP@blockbodyoffsetx}{%
+            \vspace*{\TP@blockbodyverticalshift}\large\color{blockbodyfgcolor}#3\par\normalsize}%
+        \endpgfinterruptpicture%
+    }%
+    \setlength{\TP@blockbodyheight}{\ht\TP@blockbodybox + \dp\TP@blockbodybox +2\TP@blockbodyinnersep}
+
+    % Set coordinates
+    \node[minimum width=\TP@blocktitlewidth, minimum height=\TP@blocktitleheight, anchor=center] (blocktitle)%
+        at (\TP@blockcenter+\TP@blocktitleoffsetx, {\TP@blocktop-0.5\TP@blocktitleheight+\TP@blocktitleoffsety}){};
+    \ifBlockHasTitle
+        \node[minimum width=\TP@blockbodywidth, minimum height=\TP@blockbodyheight, anchor=center] (blockbody)%
+            at (\TP@blockcenter+\TP@blockbodyoffsetx, {\TP@blocktop-\TP@blocktitleheight-0.5\TP@blockbodyheight+\TP@blockbodyoffsety}){};
+    \else
+        \node[minimum width=\TP@blockbodywidth, minimum height=\TP@blockbodyheight, anchor=center] (blockbody)%
+            at (\TP@blockcenter+\TP@blockbodyoffsetx, {\TP@blocktop-\TP@blocktitleheight-0.5\TP@blockbodyheight}){};
+    \fi
+
+    % Draw style
+    \TP@blockstyle
+
+    % Draw text
+    \ifBlockHasTitle
+        \node[text width=\TP@blocktitlewidth-2\TP@blocktitleinnersep, inner sep=\TP@blocktitleinnersep, anchor=center]%
+            at (blocktitle){\box\TP@blocktitlebox};
+    \fi
+    \node[text width=\TP@blockbodywidth-2\TP@blockbodyinnersep, inner sep=\TP@blockbodyinnersep, anchor=center]%
+        at (blockbody){\box\TP@blockbodybox};
+
+    % Set position parameter
+    \draw let \p1 = (blockbody.south) in node {
+        \setlength{\TP@blocktop}{\y1-\TP@blockverticalspace}
+        \global\TP@blocktop=\TP@blocktop
+    };
+    \ifTP@subcolumnEnvironment
+        \setlength{\TP@subcolbottom}{\minof{\TP@subcolbottom}{\TP@blocktop}}
+        \global\TP@subcolbottom=\TP@subcolbottom
+    \else
+        \ifTP@columnEnvironment
+            \setlength{\TP@colbottom}{\minof{\TP@colbottom}{\TP@blocktop}}
+            \global\TP@colbottom=\TP@colbottom
+        \fi
+    \fi
+}
+\makeatother

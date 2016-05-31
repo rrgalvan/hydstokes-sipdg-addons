@@ -1,0 +1,63 @@
+% Style file for the Abstract of the 
+% XVII Spanish-French School `Jacques-Louis Lions' about Numerical Simulation in Physics and Engineering
+% Gijón, 6-10 June 2016
+% (Modification of the style od CEDYA 2015 Cádiz)
+
+%Set dimensions of columns, gap between columns, and paragraph indent
+
+\setlength{\columnsep}{1pc}
+
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{0.12in}
+
+\makeatletter
+\def\@normalsize{\@setsize\normalsize{10pt}\xpt\@xpt
+\abovedisplayskip 12pt plus2pt minus4pt
+\belowdisplayskip\abovedisplayskip 
+\abovedisplayshortskip \z@ plus3pt
+\belowdisplayshortskip 8pt plus4pt minus4pt
+\let\@listi\@listI}
+
+%11 pt font size for subsection and abstract headings
+\def\subsize{\@setsize\subsize{12pt}\xipt\@xipt}
+%make section titles bold and 12 point, 2 blank lines before, 1 after
+\def\section{\@startsection {section}{1}{\z@}{1.0ex plus
+1ex minus .2ex}{.2ex plus .2ex}{\large\bf}}
+%make subsection titles bold and 11 point, 1 blank line before, 1 after
+\def\subsection{\@startsection
+   {subsection}{2}{\z@}{.2ex plus 1ex} {.2ex plus .2ex}{\subsize\bf}}
+\makeatother
+
+
+\theoremstyle{plain} 
+\theorembodyfont{\slshape} 
+ \newtheorem{theorem}{Theorem}
+ \newtheorem{corollary}[theorem]{Corollary}
+ \newtheorem{lemma}[theorem]{Lemma}
+ \newtheorem{proposition}[theorem]{Proposition}
+{\theorembodyfont{\upshape} 
+ \newtheorem{definition}[theorem]{Definition}
+ \newtheorem{example}[theorem]{Example}
+\newtheorem{remark}[theorem]{Remark}}
+\theoremheaderfont{\scshape\bfseries}
+
+\newcommand{\C}{\ensuremath{\mathbb{C}}}
+\newcommand{\N}{\ensuremath{\mathbb{N}}}
+\newcommand{\Q}{\ensuremath{\mathbb{Q}}}
+\newcommand{\R}{\ensuremath{\mathbb{R}}}
+\newcommand{\Z}{\ensuremath{\mathbb{Z}}}
+
+
+\newenvironment{Abstract}{\hfill\begin{minipage}{.9\textwidth}
+\textbf{\textit{\small Abstract}}\begingroup\small---}{\endgroup\end{minipage}\vskip 2em plus1em minus .5em}
+
+\newenvironment{keywords}{\hfill\begin{minipage}{.9\textwidth}
+\textbf{\small Keywords:}\begingroup\small }{\endgroup\end{minipage}\vskip 0pt}%2em plus1em minus .5em}
+
+\newenvironment{AMS}{\hfill\begin{minipage}{.9\textwidth}
+\textbf{\small \href{http://www.ams.org/msc/msc2010.html}{Mathematics Subject Classification (2010)}:}\begingroup\small }{\endgroup\end{minipage}\vskip 2em plus1em minus .5em}
+
+\date{}
+
+
+\newcommand{\titleref}[1]{{\textsl{#1}}}

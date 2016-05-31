@@ -1,0 +1,87 @@
+\RequirePackage{bm} % Bold Math
+\RequirePackage{xspace}
+
+%>>================================ begin of my definitions >>
+
+\newcommand{\uu}{\mathbf{u}}
+
+\newcommand{\domain}{\Omega}
+\newcommand{\Th}{\ensuremath{{\cal T}_h}}
+
+\newcommand{\dt}[1]{\partial_t #1}
+\newcommand{\dx}[1]{\partial_x #1}
+\newcommand{\dy}[1]{\partial_y #1}
+% \newcommand{\dz}[1]{\partial_z #1}
+\newcommand{\grad}[1]{\nabla #1}
+\newcommand{\gradx}[1]{\nabla_\mathbf{x} #1}
+\renewcommand{\div}[1]{\nabla\cdot{}#1}
+\newcommand{\divx}[1]{\nabla_\mathbf{x}\cdot{}#1}
+\newcommand{\vv}{v}
+\newcommand{\ww}{\mathbf{w}}
+\newcommand{\ff}{\mathbf{f}}
+\newcommand{\gs}{\mathbf{g}_{s}}
+\newcommand{\pp}{p}
+\newcommand{\qq}{q}
+\newcommand{\ps}{p_s}
+
+\newcommand{\uh}{\uu_{h}}
+\newcommand{\vh}{\vv_{h}}
+\newcommand{\wh}{\ww_{h}}
+\newcommand{\um}{\uu^{m}}
+\newcommand{\umm}{\uu^{m+1}}
+\newcommand{\vm}{\vv^{m}}
+\newcommand{\vmm}{\vv^{m+1}}
+\newcommand{\uzh}{u_{3,h}}
+\newcommand{\vzh}{v_{3,h}}
+\newcommand{\ph}{p_{h}}
+\newcommand{\qh}{q_{h}}
+
+\newcommand{\bu}{\overline \uu}
+\newcommand{\bv}{\overline \vv}
+\newcommand{\bw}{\overline \ww}
+\newcommand{\bp}{\overline \pp}
+\newcommand{\buh}{\overline{\uu}_h}
+\newcommand{\bvh}{\overline{\vv}_h}
+\newcommand{\bwh}{\overline{\ww}_h}
+\newcommand{\bph}{\overline{\pp}_h}
+
+\newcommand{\UU}{\mathbf{U}}
+\newcommand{\VV}{V}
+\newcommand{\WW}{\mathbf{W}}
+\newcommand{\PP}{P}
+\newcommand{\XX}{\mathbf{X}}
+
+\newcommand{\Uh}{\ensuremath{\mathbf{U}_h}}
+\newcommand{\Vh}{\ensuremath{V_h}}
+\newcommand{\Ph}{\ensuremath{P_h}}
+\newcommand{\Wh}{\ensuremath{\WW_h}}
+\newcommand{\Xh}{\ensuremath{\XX_h}}
+
+% Inf-sup conditions
+\def\ConstISp{\beta_p}
+\def\ConstISph{\gamma_{p}}
+\def\ConstISv{\beta_v}
+\def\ConstISvh{\gamma_v}
+
+% ---------- Discontinous Galerkin ----------------
+\newcommand{\Eh}{\ensuremath{{\cal E}_h}\xspace}
+\newcommand{\Ehi}{\ensuremath{{\cal E}_h^0}\xspace}
+\newcommand{\Ehb}{\ensuremath{{\cal E}_h^\partial}\xspace}
+
+\newcommand{\jump}[1]{\ensuremath{\left[\!\left[#1\right]\!\right]}\xspace}
+\newcommand{\average}[1]{\ensuremath{\left\{\!\!\left\{#1\right\}\!\!\right\}}\xspace}
+
+\newcommand{\asip}[1][sip]{\ensuremath{a_h^{\mathrm{#1}}}}
+\newcommand{\gradh}{\ensuremath{\nabla_h}}
+\newcommand{\dzh}{\ensuremath{\partial_{z,h}}}
+
+\newcommand{\norm}[2][]{\ensuremath{\|#2\|_{#1}\xspace}}
+\newcommand{\normsip}[1]{\norm[\mathrm{sip}]{#1}}
+\newcommand{\seminormJ}[1]{\ensuremath{|#1|_{\mathrm{J}}}}
+\newcommand{\normvel}[1]{\norm[\mathrm{vel}]{#1}}
+
+%%%
+
+\newcommand{\eps}{\bm{\ensuremath{\varepsilon}}}
+
+%<<================================end of my definitions
