@@ -4,6 +4,6 @@ This repository contains a set of extensions ("addons") to the paper "Stable Dis
 
 Specifically, it contains:
 
-- Test suite for SIP Discontinuous Galerkin models applied to Hydrostatic Stokes equations. 
+- Test suite for SIP Discontinuous Galerkin models applied to Hydrostatic Stokes equations.
 
-- The LaTeX fonts for a poster presented in EHf2016 (Gijon)
+- The LaTeX source files for a poster presented in EHf2016 (Gijon)
