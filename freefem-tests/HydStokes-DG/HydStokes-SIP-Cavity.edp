@@ -12,7 +12,7 @@
 verbosity=0;
 int interactive=1; // If 1: plot results
 
-real SIPPenalty=1.0e+2; // Penalty to achieve coercivity in DG SIP forms
+real SIPPenalty=1.0e+3; // Penalty to achieve coercivity in DG SIP forms
 real BoundaryPenalty=3.0e+2; // Penalty for Nitsche method (weak Dirichlet condition)
 real nu=1.0;
 
@@ -86,6 +86,15 @@ for(int i=0; i<meshSizes.n; i++) {
       + (LocalPenalty)*(jump(u)*jump(ub))
       )
      ) EndMacro;
+  NewMacro aSIPv(u, ub, viscosity)
+    (
+     int2d(Th) ( viscosity * ( dy(u)*dy(ub) ) )
+     + intalledges(Th)
+     (
+      - viscosity * ( jump(ub)*average(dn(u)) + jump(u)*average(dn(ub)) ) /nTonEdge
+      + (LocalPenalty)*(jump(u)*jump(ub))
+      )
+     ) EndMacro;
   NewMacro bSIP1(u,v,p)
     int2d(Th)( -p*(div(u,v)) )
     EndMacro;
@@ -105,7 +114,7 @@ for(int i=0; i<meshSizes.n; i++) {
   //////////////////////////////
 
   problem HydStokesSIP([u,v,p], [ub,vb,pb]) =
-    aSIP(u, ub, nu) + aSIP(v, vb, nu*dEpsilon2) // Bilinear form a(.,.)
+    aSIP(u, ub, nu) + aSIPv(v, vb, nu*dEpsilon2) // Bilinear form a(.,.)
     + bSIP1(ub,vb,p) + bSIP2(ub,vb,p) // Bilinear form b(.,.)
     - bSIP1(u,v,pb) - bSIP2(u,v,pb) // Bilinear form b(.,.)
     + sSIP(p, pb) // Stabilization
