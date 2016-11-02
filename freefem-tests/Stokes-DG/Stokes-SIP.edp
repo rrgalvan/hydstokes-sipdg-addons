@@ -5,6 +5,9 @@
 //
 // J. Rafael Rodr\'iguez Galv\'an
 
+// load "MUMPS_FreeFem"
+load "UMFPACK64"; // To avoid "UMFPACK ERROR: out of memory"
+
 load "Element_P3"
 load "Element_P4"
 load "Element_P3dc"
@@ -15,7 +18,7 @@ load "Element_P4dc"
 ////////////////
 
 verbosity=0;
-int interactive=0; // If 1: plot results
+int interactive=1; // If 1: plot results
 
 real SIPPenalty=5.0e+3; // Penalty to achieve coercivity
 real nu=1.;
@@ -30,7 +33,7 @@ include "exact-sol-Stokes-steady.idp"
 
 func f1 = f1Exact; // RHS / u
 func f2 = f2Exact; // RHS / v
-real pEpsilon  = 1.0e-10; // Penalty epsilon in p-equations
+real pEpsilon  = 1.0e-9; // Penalty epsilon in p-equations
 
 real[int] uErrL2(2), uErrH1(2), pErrL2(2); // Errors in 2 time steps (for orders)
 real[int] uuErrL2(2), uuErrH1(2), ppErrL2(2); // Errors in 2 time steps (for orders)
@@ -49,16 +52,17 @@ for(int i=0; i<meshSizes.n; i++) {
 
   int k = 1; // Degree of the polynomials (2 for P2dc ...)
   assert(k==1); // Assure to change the following lines...
-  func PkDG = P1dc;  // Discontinuous Pk
+  func PkDGu = P1dc;  // Discontinuous Pk for pressure
+  func PkDGp = P1dc;  // Discontinuous Pk for pressure
   func PkCGu = P1b;  // Continous Pk for velocity
   func PkCGp = P1;  // Continous Pk for pressure
   int qfo = 2*k;  // Order of quadrature formula
-  int qfoP = qfo+1;  // Order of quadrature formula for pressure integrals
+  int qfoP = qfo;  // Order of quadrature formula for pressure integrals
 
   // Discontinuous FE
-  fespace UhDisc(Th,PkDG);
-  fespace VhDisc(Th,PkDG);
-  fespace PhDisc(Th,PkDG);
+  fespace UhDisc(Th,PkDGu);
+  fespace VhDisc(Th,PkDGu);
+  fespace PhDisc(Th,PkDGp);
   UhDisc u, ub;
   VhDisc v, vb;
   PhDisc p, pb;
@@ -80,26 +84,26 @@ for(int i=0; i<meshSizes.n; i++) {
   macro div(u,v) (dx(u)+dy(v)) // EOM
     ;
   // def: jump = external - internal value; on border exter value =0
-  //      average = (external + internal value)/2, on border just internal value
+  //      mean = (external + internal value)/2, on border just internal value
   NewMacro aSIP(u,ub)
     (
-     int2d(Th, qforder=qfo) ( nu * ( dx(u)*dx(ub) + dy(u)*dy(ub) ) )
-     + intalledges(Th, qforder=qfo)
+     int2d(Th) ( nu * ( dx(u)*dx(ub) + dy(u)*dy(ub) ) )
+     + intalledges(Th)
      (
-      ( jump(ub)*average(dn(u)) + jump(u)*average(dn(ub)) ) /nTonEdge
-      + LocalPenalty*(jump(u)*jump(ub))
+      nu*( jump(ub)*mean(dn(u)) + jump(u)*mean(dn(ub)) ) /nTonEdge
+      + LocalPenalty*(jump(u)*jump(ub))/nTonEdge
       )
      ) EndMacro;
   NewMacro bSIP1(u,v,p)
-    int2d(Th, qforder=qfoP)( -p*(div(u,v)) )
+    int2d(Th)( -p*(div(u,v)) )
     EndMacro;
   NewMacro bSIP2(u,v,p)
-    intalledges(Th, qforder=qfo)
+    intalledges(Th)
     (
-     (jump(u)*N.x + jump(v)*N.y)*average(p) /nTonEdge
+     (jump(u)*N.x + jump(v)*N.y)*mean(p) /nTonEdge
      ) EndMacro;
   NewMacro sSIP(q,r)
-    intalledges(Th, qforder=qfoP)
+    intalledges(Th)
     (
      (nTonEdge-1)*hFace*jump(q)*jump(r)
      ) EndMacro;
@@ -119,10 +123,10 @@ for(int i=0; i<meshSizes.n; i++) {
      + f1(x,y) * ub
      + f2(x,y) * vb
      )
-    // + int1d(Th, bottom, walls, surface)
+    // - int1d(Th, bottom, walls, surface)
     // ( // Dirichlet condition (imposee de maniere faible)
-    //  uExact(x,y)*(dn(ub)-LocalPenalty*ub)
-    //  + vExact(x,y)*(dn(vb)-LocalPenalty*vb)
+    //  uExact(x,y)*(dn(ub)+SIPPenalty*LocalPenalty*ub)
+    //  + vExact(x,y)*(dn(vb)+SIPPenalty*vb)
     //  );
     + on(bottom,  u=uExact(x,y), v=vExact(x,y))
     + on(walls,   u=uExact(x,y), v=vExact(x,y))

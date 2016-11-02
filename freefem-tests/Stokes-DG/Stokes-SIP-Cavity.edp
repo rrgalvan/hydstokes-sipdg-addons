@@ -172,9 +172,9 @@ for(int i=0; i<meshSizes.n; i++) {
   real kinDG = sqrt(int2d(Th)(square(u)+square(v)));
   real kinCG = sqrt(int2d(Th)(square(uu)+square(vv)));
   cout << " Kinetic Energy................ CG/DG: " << kinCG << " / " << kinDG << endl;
-  real pDG = sqrt(int2d(Th)(square(p)));
-  real pCG = sqrt(int2d(Th)(square(pp)));
-  cout << " Pressure (squared norm)....... CG/DG: " << pCG << " / " << pDG << endl;
+  real pDG = int2d(Th)(p);
+  real pCG = int2d(Th)(pp);
+  cout << " Pressure integral....... CG/DG: " << pCG << " / " << pDG << endl;
 
   if(true) {
     load "iovtk";

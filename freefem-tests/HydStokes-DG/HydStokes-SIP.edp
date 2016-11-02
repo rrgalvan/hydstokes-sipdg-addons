@@ -20,10 +20,10 @@ load "Element_P4dc"
 verbosity=0;
 int interactive=0; // If 1: plot results
 
-real SIPPenalty=1.0e+4; // DG Penalty (to achieve coercivity)
+real SIPPenalty=5.0e+3; // DG Penalty (to achieve coercivity)
 real nu=1.; // Horizontal viscosity coefficient
 
-real domainEpsilon = 1.e-3; //1.e-7; // Domain Epsilon
+real domainEpsilon = 1.e-0; //1.e-7; // Domain Epsilon
 real dEpsilon2 = domainEpsilon*domainEpsilon;
 
 // macro hFace() (1.0/sqrt(n)) // An approximation of h_F (length of face)
@@ -35,9 +35,9 @@ macro LocalPenalty() (SIPPenalty/hFace) // EOM
 include "exact-sol-HydStokes-steady.idp"
 func f1 = f1Exact; // RHS / u
 func f2 = f2Exact; // RHS / v
-real pEpsilon  = 1.0e-10; // Penalty epsilon in p-equations
+real pEpsilon  = 1.0e-9; // Penalty epsilon in p-equations
 
-real[int] uErrL2(2), uErrH1(2), pErrL2(2); // Errors in 2 time steps (for orders)
+real[int] uErrL2(2), uErrH1(2), vErrL2(2), vErrH1(2), pErrL2(2); // Errors in 2 time steps (for orders)
 real[int] uuErrL2(2), uuErrH1(2), ppErrL2(2); // Errors in 2 time steps (for orders)
 
 int [int] meshSizes= [8,16,32,64];
@@ -59,8 +59,7 @@ for(int i=0; i<meshSizes.n; i++) {
   func PkCGu = P1b;  // Continous Pk for velocity
   func PkCGp = P1;  // Continous Pk for pressure
   int qfo = 2*k;  // Order of quadrature formula
-  int qfoV = qfo;  // Order of quadrature formula for v integrals
-  int qfoP = qfo+1;  // Order of quadrature formula for pressure integrals
+  int qfoP = qfo;  // Order of quadrature formula for pressure integrals
 
   // Discontinuous FE
   fespace UhDisc(Th,PkDGu);
@@ -94,7 +93,7 @@ for(int i=0; i<meshSizes.n; i++) {
      + intalledges(Th)
      (
       nu*( jump(ub)*average(dn(u)) + jump(u)*average(dn(ub)) ) /nTonEdge
-      + LocalPenalty*(jump(u)*jump(ub))
+      + LocalPenalty*(jump(u)*jump(ub))/nTonEdge
       )
      ) EndMacro;
   NewMacro aVSIP(v,vb)
@@ -104,7 +103,7 @@ for(int i=0; i<meshSizes.n; i++) {
      (
       // dEpsilon2*PenaltyParameter*(jump(v)*jump(vb)) /nTonEdge
       nu*dEpsilon2*( jump(vb)*average(dn(v)) + jump(v)*average(dn(vb)) ) /nTonEdge
-      + LocalPenalty*(jump(v)*jump(vb))
+      + LocalPenalty*(jump(v)*jump(vb))/nTonEdge
       )
      ) EndMacro;
   NewMacro bSIP1(u,v,p)
@@ -181,7 +180,8 @@ for(int i=0; i<meshSizes.n; i++) {
   }
   time1 = clock();
   cout << "DG SIP time: " << time1-time0 << " << [SIP-DG]"<< endl;
-  if(interactive) plot(p,cmm="Discontinuous Galerkin",wait=1,value=1,fill=1);
+  if(interactive) plot(v,cmm="Discontinuous Galerkin Vertical Velocity",wait=1,value=1,fill=1);
+  if(interactive) plot(p,cmm="Discontinuous Galerkin Pressure",wait=1,value=1,fill=1);
 
   //////////////
   // Solve CG //
@@ -190,7 +190,7 @@ for(int i=0; i<meshSizes.n; i++) {
   HydStokes;
   time1 = clock();
   cout << "CG time:     " << time1-time0 << endl;
-  if(interactive) plot(pp,cmm="Continuous Galerkin",wait=1,value=1,fill=1);
+  if(interactive) plot(pp,cmm="Continuous Galerkin Pressure",wait=1,value=1,fill=1);
 
   // cout << "Residual (DG): " << int2d(Th)(dx(u)*dx(u) +
   // dy(u)*dy(u) - int2d(Th)(f*u)) << endl;
@@ -226,10 +226,13 @@ for(int i=0; i<meshSizes.n; i++) {
   	    dataname="ExactV ExactP") ;
   }
 
-  uErrL2[1] = sqrt(int2d(Th)(square(u-uExact(x,y))) + int2d(Th)(square(v-vExact(x,y))));
-  uErrH1[1] = sqrt(int2d(Th)(square(dx(u)-DXuExact(x,y))) + int2d(Th)(square(dy(u)-DYuExact(x,y))));
+  uErrL2[1] = sqrt(int2d(Th)(square(u-uExact(x,y))));
+  uErrH1[1] = sqrt(int2d(Th)(square(dx(u)-DXuExact(x,y))));
+  vErrL2[1] = sqrt(int2d(Th)(square(v-vExact(x,y))));
+  vErrH1[1] = sqrt(int2d(Th)(square(dx(v)-DXvExact(x,y))));
   pErrL2[1] = sqrt(int2d(Th)(square(p-pExact(x,y))));
-  cout << "DG u/p error L2: " << uErrL2[1] << "/" << pErrL2[1] << "<<***" << endl;
+  cout << "DG u,v/p error L2: " << uErrL2[1] << "," << vErrL2[1] << "/" << pErrL2[1] << "<<***" << endl;
+  cout << "DG u,v error H1: " << uErrH1[1] << "," << vErrH1[1]  << endl;
   uuErrL2[1] = sqrt(int2d(Th)(square(uu-uExact(x,y))) + int2d(Th)(square(vv-vExact(x,y))));
   uuErrH1[1] = sqrt(int2d(Th)(square(dx(uu)-DXuExact(x,y))) + int2d(Th)(square(dy(uu)-DYuExact(x,y))));
   ppErrL2[1] = sqrt(int2d(Th)(square(pp-pExact(x,y))));
@@ -239,12 +242,14 @@ for(int i=0; i<meshSizes.n; i++) {
     cout << "Convergence rates... " << endl <<
       " * u, L2 :"   << log(uErrL2[0]/uErrL2[1])/log(2.) << endl <<
       " * u, H1 :"   << log(uErrH1[0]/uErrH1[1])/log(2.) << endl <<
-      // " * v, L2 :"   << log(vErrL2[0]/vErrL2[1])/log(2.) << endl <<
-      // " * v, H1 :"   << log(vErrH1[0]/vErrH1[1])/log(2.) << endl <<
+      " * v, L2 :"   << log(vErrL2[0]/vErrL2[1])/log(2.) << endl <<
+      " * v, H1 :"   << log(vErrH1[0]/vErrH1[1])/log(2.) << endl <<
       " * p, L2 :"   << log(pErrL2[0]/pErrL2[1])/log(2.) << endl <<
       endl;
   }
   uErrL2[0] = uErrL2[1];
   uErrH1[0] = uErrH1[1];
+  vErrL2[0] = vErrL2[1];
+  vErrH1[0] = vErrH1[1];
   pErrL2[0] = pErrL2[1];
  }
