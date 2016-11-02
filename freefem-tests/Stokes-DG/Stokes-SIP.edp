@@ -15,7 +15,7 @@ load "Element_P4dc"
 ////////////////
 
 verbosity=0;
-int interactive=1; // If 1: plot results
+int interactive=0; // If 1: plot results
 
 real SIPPenalty=5.0e+4; // Penalty to achieve coercivity
 real nu=1.;
@@ -119,14 +119,14 @@ for(int i=0; i<meshSizes.n; i++) {
      + f1(x,y) * ub
      + f2(x,y) * vb
      )
-    + int1d(Th, bottom, walls, surface)
-    ( // Dirichlet condition (imposee de maniere faible)
-     uExact(x,y)*(dn(ub)-LocalPenalty*ub)
-     + vExact(x,y)*(dn(vb)-LocalPenalty*vb)
-     );
-    // + on(bottom,  u=uExact(x,y), v=vExact(x,y))
-    // + on(walls,   u=uExact(x,y), v=vExact(x,y))
-    // + on(surface, u=uExact(x,y), v=vExact(x,y));
+    // + int1d(Th, bottom, walls, surface)
+    // ( // Dirichlet condition (imposee de maniere faible)
+    //  uExact(x,y)*(dn(ub)-LocalPenalty*ub)
+    //  + vExact(x,y)*(dn(vb)-LocalPenalty*vb)
+    //  );
+    + on(bottom,  u=uExact(x,y), v=vExact(x,y))
+    + on(walls,   u=uExact(x,y), v=vExact(x,y))
+    + on(surface, u=uExact(x,y), v=vExact(x,y));
 
   problem Stokes([uu,vv,pp], [uub,vvb,ppb]) =
     int2d(Th) (

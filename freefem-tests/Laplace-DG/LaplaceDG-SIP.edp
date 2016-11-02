@@ -17,7 +17,7 @@ load "Element_P4dc"
 ////////////////
 
 verbosity=0;
-int interactive=1; // If 1: plot results
+int interactive=0; // If 1: plot results
 
 real PenaltyParameter=1000; // Penalisation for achieve coercivity
 real C=1.;
@@ -82,7 +82,8 @@ for(int i=0; i<meshSizes.n; i++) {
     problem PoissonSIP(u,v)
     = aSIP(u,v)
     - int2d(Th, qforder=qfo)(f*v) // RHS
-    + int1d(Th, dirichletBoundary, qforder=qfo)( g*(dn(v)-PenaltyParameter*v) ); // Dirichlet condition (imposee de maniere faible)
+    // + int1d(Th, dirichletBoundary, qforder=qfo)( g*(dn(v)-PenaltyParameter*v) ); // Dirichlet condition (imposee de maniere faible)
+      + on(1,2,3,4,u=g);
 
   problem Poisson(uu,vv,solver=CG)
     = int2d(Th)(dx(uu)*dx(vv)+dy(uu)*dy(vv)) - int2d(Th)(f*vv) + on(1,2,3,4,uu=g);
