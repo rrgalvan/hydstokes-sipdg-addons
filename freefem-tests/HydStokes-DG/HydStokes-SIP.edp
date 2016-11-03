@@ -92,7 +92,7 @@ for(int i=0; i<meshSizes.n; i++) {
      int2d(Th) ( nu * ( dx(u)*dx(ub) + dy(u)*dy(ub) ) )
      + intalledges(Th)
      (
-      nu*( jump(ub)*average(dn(u)) + jump(u)*average(dn(ub)) ) /nTonEdge
+      - nu*( jump(ub)*average(dn(u)) + jump(u)*average(dn(ub)) ) /nTonEdge
       + LocalPenalty*(jump(u)*jump(ub))/nTonEdge
       )
      ) EndMacro;

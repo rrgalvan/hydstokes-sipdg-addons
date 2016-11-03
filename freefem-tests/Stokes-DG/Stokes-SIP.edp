@@ -18,9 +18,9 @@ load "Element_P4dc"
 ////////////////
 
 verbosity=0;
-int interactive=1; // If 1: plot results
+int interactive=0; // If 1: plot results
 
-real SIPPenalty=5.0e+3; // Penalty to achieve coercivity
+real SIPPenalty=2e+3; // Penalty to achieve coercivity
 real nu=1.;
 
 // macro hFace() (1.0/sqrt(n)) // An approximation of h_F (length of face)
@@ -33,7 +33,7 @@ include "exact-sol-Stokes-steady.idp"
 
 func f1 = f1Exact; // RHS / u
 func f2 = f2Exact; // RHS / v
-real pEpsilon  = 1.0e-9; // Penalty epsilon in p-equations
+real pEpsilon  = 1.0e-10; // Penalty epsilon in p-equations
 
 real[int] uErrL2(2), uErrH1(2), pErrL2(2); // Errors in 2 time steps (for orders)
 real[int] uuErrL2(2), uuErrH1(2), ppErrL2(2); // Errors in 2 time steps (for orders)
@@ -90,7 +90,7 @@ for(int i=0; i<meshSizes.n; i++) {
      int2d(Th) ( nu * ( dx(u)*dx(ub) + dy(u)*dy(ub) ) )
      + intalledges(Th)
      (
-      nu*( jump(ub)*mean(dn(u)) + jump(u)*mean(dn(ub)) ) /nTonEdge
+      - nu*( jump(ub)*average(dn(u)) + jump(u)*average(dn(ub)) ) /nTonEdge
       + LocalPenalty*(jump(u)*jump(ub))/nTonEdge
       )
      ) EndMacro;
@@ -100,7 +100,7 @@ for(int i=0; i<meshSizes.n; i++) {
   NewMacro bSIP2(u,v,p)
     intalledges(Th)
     (
-     (jump(u)*N.x + jump(v)*N.y)*mean(p) /nTonEdge
+     (jump(u)*N.x + jump(v)*N.y)*average(p) /nTonEdge
      ) EndMacro;
   NewMacro sSIP(q,r)
     intalledges(Th)

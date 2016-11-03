@@ -21,9 +21,6 @@ func real DYuExact(real x, real y) {
 func real DYYuExact(real x, real y) {
   return -4*piSquare*(cos(pi2*x)-1)*sin(pi2*y);
 }
-func real DTuExact(real x, real y) {
-  return -uExact(x,y);
-}
 
 func real DXvExact(real x, real y) {
   return -DYuExact(y,x);
@@ -36,9 +33,6 @@ func real DYvExact(real x, real y) {
 }
 func real DYYvExact(real x, real y) {
   return -DXXuExact(y,x);
-}
-func real DTvExact(real x, real y) {
-  return -vExact(x,y);
 }
 
 func real pExact(real x, real y) {

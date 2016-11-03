@@ -10,9 +10,9 @@
 ////////////////
 
 verbosity=0;
-int interactive=1; // If 1: plot results
+int interactive=0; // If 1: plot results
 
-real SIPPenalty=1.0e+2; // Penalty to achieve coercivity in DG SIP forms
+real SIPPenalty=5.0e+3; // Penalty to achieve coercivity in DG SIP forms
 real BoundaryPenalty=3.0e+2; // Penalty for Nitsche method (weak Dirichlet condition)
 real nu=1.0;
 
@@ -42,16 +42,17 @@ for(int i=0; i<meshSizes.n; i++) {
 
   int k = 1; // Degree of the polynomials (2 for P2dc ...)
   assert(k==1); // Assure to change the following lines...
-  func PkDG = P1dc;  // Discontinuous Pk
+  func PkDGu = P1dc;  // Discontinuous Pk for pressure
+  func PkDGp = P1dc;  // Discontinuous Pk for pressure
   func PkCGu = P1b;  // Continous Pk for velocity
   func PkCGp = P1;  // Continous Pk for pressure
-  int qfo = 2*k+1;  // Order of quadrature formula
+  int qfo = 2*k;  // Order of quadrature formula
   int qfoP = qfo;  // Order of quadrature formula for pressure integrals
 
   // Discontinuous FE
-  fespace UhDisc(Th,PkDG);
-  fespace VhDisc(Th,PkDG);
-  fespace PhDisc(Th,PkDG);
+  fespace UhDisc(Th,PkDGu);
+  fespace VhDisc(Th,PkDGu);
+  fespace PhDisc(Th,PkDGp);
   UhDisc u, ub;
   VhDisc v, vb;
   PhDisc p, pb;
@@ -79,8 +80,8 @@ for(int i=0; i<meshSizes.n; i++) {
      int2d(Th) ( nu * ( dx(u)*dx(ub) + dy(u)*dy(ub) ) )
      + intalledges(Th)
      (
-      - ( jump(ub)*average(dn(u)) + jump(u)*average(dn(ub)) ) /nTonEdge
-      + (LocalPenalty)*(jump(u)*jump(ub))
+      - ( jump(ub)*average(dn(u)) + jump(u)*average(dn(ub)) ) / nTonEdge
+      + (LocalPenalty)*(jump(u)*jump(ub)) / nTonEdge
       )
      ) EndMacro;
   NewMacro bSIP1(u,v,p)
@@ -107,21 +108,23 @@ for(int i=0; i<meshSizes.n; i++) {
     - bSIP1(u,v,pb) - bSIP2(u,v,pb) // Bilinear form b(.,.)
     + sSIP(p, pb) // Stabilization
     + int2d(Th)(pEpsilon*p*pb)
-    + int1d(Th, surface, bottom, walls)
-    (
-     - nu*(dn(u)*ub + dn(v)*vb)
-     )
-    + int1d(Th, surface, bottom, walls)
-    (
-     + nu*(u*dn(ub) + v*dn(vb))
-     + BoundaryPenalty/hFace*(u*ub + v*vb)
-     )
-    // RHS //
-    + int1d(Th, surface)
-    (
-     - nu*uSurface*dn(ub)
-     - (BoundaryPenalty/hFace)*uSurface*ub
-     );
+    // + int1d(Th, surface, bottom, walls)
+    // (
+    //  - nu*(dn(u)*ub + dn(v)*vb)
+    //  )
+    // + int1d(Th, surface, bottom, walls)
+    // (
+    //  + nu*(u*dn(ub) + v*dn(vb))
+    //  + BoundaryPenalty/hFace*(u*ub + v*vb)
+    //  )
+    // // RHS //
+    // + int1d(Th, surface)
+    // (
+    //  - nu*uSurface*dn(ub)
+    //  - (BoundaryPenalty/hFace)*uSurface*ub
+    //  );
+    + on(bottom, walls,  u=0, v=0)
+    + on(surface, u=uSurface, v=0);
 
   problem Stokes([uu,vv,pp], [uub,vvb,ppb]) =
     int2d(Th) (
@@ -131,22 +134,23 @@ for(int i=0; i<meshSizes.n; i++) {
 	       + dx(uu)*ppb + dy(vv)*ppb
 	       + pEpsilon*pp*ppb
 	       )
-    + int1d(Th, surface, bottom, walls)
-    (
-     - nu*(dn(uu)*uub + dn(vv)*vvb)
-     )
-    + int1d(Th, surface, bottom, walls)
-    (
-     - nu*(uu*dn(uub) + vv*dn(vvb))
-     + BoundaryPenalty/hFace*(uu*uub + vv*vvb)
-     )
-    // RHS //
-    + int1d(Th, surface)
-    (
-     + nu*uSurface*dn(uub)
-     - (BoundaryPenalty/hFace)*uSurface*uub
-     )
+    // + int1d(Th, surface, bottom, walls)
+    // (
+    //  - nu*(dn(uu)*uub + dn(vv)*vvb)
+    //  )
+    // + int1d(Th, surface, bottom, walls)
+    // (
+    //  - nu*(uu*dn(uub) + vv*dn(vvb))
+    //  + BoundaryPenalty/hFace*(uu*uub + vv*vvb)
+    //  )
+    // // RHS //
+    // + int1d(Th, surface)
+    // (
+    //  + nu*uSurface*dn(uub)
+    //  - (BoundaryPenalty/hFace)*uSurface*uub
+    //  )
     + on(bottom,walls, uu=0, vv=0)
+    + on(surface, uu=uSurface, vv=0);
     ;
 
   //////////////
