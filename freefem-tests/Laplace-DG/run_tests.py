@@ -1,3 +1,5 @@
+#!/usr/bin/python3
+
 from nose.tools import assert_not_equal, assert_almost_equal
 from nose.tools import with_setup
 
@@ -76,6 +78,6 @@ def test_laplace_errors():
         errorCG = float( d['CG error L2'] )
         try:
             assert_almost_equal(errorDG, errorCG, places=test['fp_places'])
-        except Exception, e:
-            print "Error in test '%s'" % (test['id_string'])
+        except (Exception) as e:
+            print ("Error in test '%s'" % (test['id_string']))
             raise e
