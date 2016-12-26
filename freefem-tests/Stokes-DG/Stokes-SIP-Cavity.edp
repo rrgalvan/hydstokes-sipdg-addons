@@ -12,7 +12,7 @@
 verbosity=0;
 int interactive=1; // If 1: plot results
 
-real SIPPenalty=5.0e+9; // Penalty to achieve coercivity in DG SIP forms
+real SIPPenalty=1.0e+4; // Penalty to achieve coercivity in DG SIP forms
 real BoundaryPenalty=3.0e+2; // Penalty for Nitsche method (weak Dirichlet condition)
 real nu=1.0;
 
@@ -83,7 +83,7 @@ for(int i=0; i<meshSizes.n; i++) {
   // Macros //
   ////////////
 
-  macro dn(u) (N.x*dx(u)+N.y*dy(u) ) //  Normal derivative
+  macro dn(u) (N.x*dx(u)+N.y*dy(u)) //  Normal derivative
     ;
   macro div(u,v) (dx(u)+dy(v)) // EOM
     ;
@@ -92,9 +92,10 @@ for(int i=0; i<meshSizes.n; i++) {
   NewMacro aSIP(u,ub)
     (
      int2d(Th) ( nu * ( dx(u)*dx(ub) + dy(u)*dy(ub) ) )
+     // Integration only on interior edges. External ones are left for weak boundary cond.
      + intalledges(Th)
      (
-      - ( jump(ub)*average(dn(u)) + jump(u)*average(dn(ub)) ) / nTonEdge
+      - ( average(dn(u))*jump(ub) + average(dn(ub))*jump(u) ) / nTonEdge
       + (LocalPenalty)*(jump(u)*jump(ub)) / nTonEdge
       )
      ) EndMacro;
@@ -103,8 +104,9 @@ for(int i=0; i<meshSizes.n; i++) {
     EndMacro;
   NewMacro bSIP2(u,v,p)
     intalledges(Th)
+    // Integration only on interior edges. External ones are left for weak boundary cond.
     (
-     (jump(u)*N.x + jump(v)*N.y)*average(p) /nTonEdge
+     (jump(u)*N.x + jump(v)*N.y)*average(p) / nTonEdge
      ) EndMacro;
   NewMacro sSIP(q,r)
     intalledges(Th)
@@ -122,23 +124,24 @@ for(int i=0; i<meshSizes.n; i++) {
     - bSIP1(u,v,pb) - bSIP2(u,v,pb) // Bilinear form b(.,.)
     + sSIP(p, pb) // Stabilization
     + int2d(Th)(pEpsilon*p*pb)
-    // + int1d(Th, surface, bottom, walls)
+    //
+    // RHS: Weak boundary conditions...
+    //
+    - int1d(Th, surface)
+    (
+     -uSurface*dn(ub)
+     )
+    - int1d(Th, surface)
+    (
+     (LocalPenalty)*uSurface*ub
+     )
+    // - int1d(Th, surface) // - bSIP2(u,v,pb)
     // (
-    //  - nu*(dn(u)*ub + dn(v)*vb)
-    //  )
-    // + int1d(Th, surface, bottom, walls)
-    // (
-    //  + nu*(u*dn(ub) + v*dn(vb))
-    //  + BoundaryPenalty/hFace*(u*ub + v*vb)
-    //  )
-    // // RHS //
-    // + int1d(Th, surface)
-    // (
-    //  - nu*uSurface*dn(ub)
-    //  - (BoundaryPenalty/hFace)*uSurface*ub
-    //  );
-    + on(bottom, walls,  u=0, v=0)
-    + on(surface, u=uSurface, v=0);
+    //  - uSurface*N.x*pb // =0 because N.x=0 on surface
+    // )
+    ;
+    // + on(bottom, walls,  u=0, v=0)
+    // + on(surface, u=uSurface, v=0);
 
   problem Stokes([uu,vv,pp], [uub,vvb,ppb]) =
     int2d(Th) (
@@ -146,7 +149,7 @@ for(int i=0; i<meshSizes.n; i++) {
 	       + nu * ( dx(vv)*dx(vvb) + dy(vv)*dy(vvb) )
 	       - pp*dx(uub) - pp*dy(vvb)
 	       + dx(uu)*ppb + dy(vv)*ppb
-	       + pEpsilon*pp*ppb
+	       // + pEpsilon*pp*ppb
 	       )
     // + int1d(Th, surface, bottom, walls)
     // (
@@ -163,7 +166,7 @@ for(int i=0; i<meshSizes.n; i++) {
     //  + nu*uSurface*dn(uub)
     //  - (BoundaryPenalty/hFace)*uSurface*uub
     //  )
-    + on(bottom,walls, uu=0, vv=0)
+    + on(bottom, walls, uu=0, vv=0)
     + on(surface, uu=uSurface, vv=0);
     ;
 
@@ -173,6 +176,8 @@ for(int i=0; i<meshSizes.n; i++) {
   real time0, time1;
   time0 = clock();
   StokesSIP;
+  real pMean=int2d(Th)(p)/int2d(Th)(1.0);
+  p=p-pMean;
   time1 = clock();
   cout << "DG SIP time: " << time1-time0 << endl;
   // plot(p,cmm="DG-mesh_size=" + n,wait=1,value=1,fill=1);
