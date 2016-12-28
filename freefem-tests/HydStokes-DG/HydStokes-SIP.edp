@@ -20,7 +20,7 @@ load "Element_P4dc"
 verbosity=0;
 int interactive=0; // If 1: plot results
 
-real SIPPenalty=5.0e+3; // DG Penalty (to achieve coercivity)
+real SIPPenalty=1.0e+4; // DG Penalty (to achieve coercivity)
 real nu=1.; // Horizontal viscosity coefficient
 
 real domainEpsilon = 1.e-0; //1.e-7; // Domain Epsilon
@@ -81,7 +81,7 @@ for(int i=0; i<meshSizes.n; i++) {
   // Macros //
   ////////////
 
-  macro dn(u) (N.x*dx(u)+N.y*dy(u) ) //  Normal derivative
+  macro dn(u) (N.x*dx(u)+N.y*dy(u)) //  Normal derivative
     ;
   macro div(u,v) (dx(u)+dy(v)) // EOM
     ;
@@ -92,7 +92,7 @@ for(int i=0; i<meshSizes.n; i++) {
      int2d(Th) ( nu * ( dx(u)*dx(ub) + dy(u)*dy(ub) ) )
      + intalledges(Th)
      (
-      - nu*( jump(ub)*average(dn(u)) + jump(u)*average(dn(ub)) ) /nTonEdge
+      - nu*( average(dn(u))*jump(ub) + jump(u)*average(dn(ub)) ) /nTonEdge
       + LocalPenalty*(jump(u)*jump(ub))/nTonEdge
       )
      ) EndMacro;
@@ -102,8 +102,8 @@ for(int i=0; i<meshSizes.n; i++) {
      + intalledges(Th)
      (
       // dEpsilon2*PenaltyParameter*(jump(v)*jump(vb)) /nTonEdge
-      nu*dEpsilon2*( jump(vb)*average(dn(v)) + jump(v)*average(dn(vb)) ) /nTonEdge
-      + LocalPenalty*(jump(v)*jump(vb))/nTonEdge
+      nu*dEpsilon2*( average(dn(v))*jump(vb) + jump(v)*average(dn(vb)) ) /nTonEdge
+      + (LocalPenalty)*(jump(v)*jump(vb))/nTonEdge
       )
      ) EndMacro;
   NewMacro bSIP1(u,v,p)
@@ -135,14 +135,30 @@ for(int i=0; i<meshSizes.n; i++) {
      + f1(x,y) * ub
      + f2(x,y) * vb
      )
-    // + int1d(Th, bottom, walls, surface)
-    // ( // Dirichlet condition (imposee de maniere faible)
-    //  uExact(x,y)*(dn(ub)-LocalPenalty*ub)
-    //  + dEpsilon2*vExact(x,y)*(dn(vb)-LocalPenalty*vb)
-    //  );
-    + on(bottom,  u=uExact(x,y), v=vExact(x,y))
-    + on(walls,   u=uExact(x,y), v=vExact(x,y))
-    + on(surface, u=uExact(x,y), v=vExact(x,y));
+    + int1d(Th, bottom, walls, surface)
+    ( // Dirichlet condition (imposee de maniere faible)
+     uExact(x,y)*(dn(ub)-LocalPenalty*ub)
+     + dEpsilon2*vExact(x,y)*(dn(vb)-LocalPenalty*vb)
+     )
+    // + int1d(Th, surface) //, bottom, walls)
+    // (
+    //  - nu*(u*dn(ub) ) //+ v*dn(vb))
+    //  // + BoundaryPenalty/hFace*(u*ub + v*vb)
+    //  )
+    // // RHS //
+    // + int1d(Th, surface)
+    // (
+    //  + nu*uSurface*dn(ub)
+    //  // - (BoundaryPenalty/hFace)*uSurface*ub
+    //  )
+    // - int1d(Th, surface)
+    // (
+    //  (LocalPenalty)*uSurface*ub
+    //  )
+    // + on(bottom,  u=uExact(x,y), v=vExact(x,y))
+    // + on(walls,   u=uExact(x,y), v=vExact(x,y))
+    // + on(surface, u=uExact(x,y), v=vExact(x,y))
+    ;
 
   problem HydStokes([uu,vv,pp], [uub,vvb,ppb]) =
     int2d(Th) (
@@ -173,9 +189,8 @@ for(int i=0; i<meshSizes.n; i++) {
   time0 = clock();
   HydStokesSIP;
   // Force zero mean
-  bool forceZeroMean=false; if(forceZeroMean) {
-    PhDisc one; one[] = 1.;
-    real pMean = int2d(Th)(p)/int2d(Th)(one);
+  bool forceZeroMean=true; if(forceZeroMean) {
+    real pMean = int2d(Th)(p)/int2d(Th)(1.0);
     p = p - pMean;
   }
   time1 = clock();

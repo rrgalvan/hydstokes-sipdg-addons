@@ -28,7 +28,7 @@ func f1 = 0; // RHS / u
 func f2 = 0; // RHS / v
 real pEpsilon  = 1.0e-10; // Penalty epsilon in p-equations
 
-int [int] meshSizes= [8,16,32];
+int [int] meshSizes= [32];
 
 for(int i=0; i<meshSizes.n; i++) {
   int n = meshSizes[i];
@@ -52,7 +52,6 @@ for(int i=0; i<meshSizes.n; i++) {
 
   mesh Th=buildmesh( bottom(n) + rWall(n)
 		     + surface(n) + lWall(n) );
-
 
   int k = 1; // Degree of the polynomials (2 for P2dc ...)
   assert(k==1); // Assure to change the following lines...
@@ -92,10 +91,9 @@ for(int i=0; i<meshSizes.n; i++) {
   NewMacro aSIP(u,ub)
     (
      int2d(Th) ( nu * ( dx(u)*dx(ub) + dy(u)*dy(ub) ) )
-     // Integration only on interior edges. External ones are left for weak boundary cond.
      + intalledges(Th)
      (
-      - ( average(dn(u))*jump(ub) + average(dn(ub))*jump(u) ) / nTonEdge
+      - nu * ( average(dn(u))*jump(ub) + average(dn(ub))*jump(u) ) / nTonEdge
       + (LocalPenalty)*(jump(u)*jump(ub)) / nTonEdge
       )
      ) EndMacro;
@@ -104,7 +102,6 @@ for(int i=0; i<meshSizes.n; i++) {
     EndMacro;
   NewMacro bSIP2(u,v,p)
     intalledges(Th)
-    // Integration only on interior edges. External ones are left for weak boundary cond.
     (
      (jump(u)*N.x + jump(v)*N.y)*average(p) / nTonEdge
      ) EndMacro;
@@ -123,12 +120,11 @@ for(int i=0; i<meshSizes.n; i++) {
     + bSIP1(ub,vb,p) + bSIP2(ub,vb,p) // Bilinear form b(.,.)
     - bSIP1(u,v,pb) - bSIP2(u,v,pb) // Bilinear form b(.,.)
     + sSIP(p, pb) // Stabilization
-    + int2d(Th)(pEpsilon*p*pb)
+    // + int2d(Th)(pEpsilon*p*pb)
     //
     // RHS: Weak boundary conditions...
     //
-    - int1d(Th, surface)
-    (
+    - int1d(Th, surface) (
      -uSurface*dn(ub)
      )
     - int1d(Th, surface)
@@ -187,6 +183,8 @@ for(int i=0; i<meshSizes.n; i++) {
   //////////////
   time0 = clock();
   Stokes;
+  pMean=int2d(Th)(p)/int2d(Th)(1.0);
+  p=p-pMean;
   time1 = clock();
   cout << "CG time:     " << time1-time0 << endl;
 
