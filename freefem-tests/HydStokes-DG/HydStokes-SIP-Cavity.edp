@@ -12,7 +12,7 @@
 verbosity=0;
 int interactive=1; // If 1: plot results
 
-real SIPPenalty=1.0e+4; // Penalty to achieve coercivity in DG SIP forms
+real SIPPenalty=1.0e+2; // Penalty to achieve coercivity in DG SIP forms
 real BoundaryPenalty=3.0e+2; // Penalty for Nitsche method (weak Dirichlet condition)
 real nu=1.0;
 
@@ -122,6 +122,7 @@ for(int i=0; i<meshSizes.n; i++) {
     intalledges(Th)
     (
      (nTonEdge-1)*hFace*jump(q)*jump(r)
+     // hFace*jump(q)*jump(r) /nTonEdge
      ) EndMacro;
 
   //////////////////////////////
@@ -132,20 +133,28 @@ for(int i=0; i<meshSizes.n; i++) {
     aSIP(u, ub, nu) + aSIPv(v, vb, nu*dEpsilon2) // Bilinear form a(.,.)
     + bSIP1(ub,vb,p) + bSIP2(ub,vb,p) // Bilinear form b(.,.)
     - bSIP1(u,v,pb) - bSIP2(u,v,pb) // Bilinear form b(.,.)
-    + sSIP(p, pb) // Stabilization
-    + int2d(Th)(pEpsilon*p*pb)
+    + sSIP(p, pb) // Penalización
+    // + int2d(Th)(pEpsilon*p*pb)
+
+    + int1d(Th, lWall, rWall)
+    (
+    - v*(LocalPenalty)*ub
+     )
 
     //
-    // RHS: Weak boundary conditions...
+    // Boundary conditions (Weakly impossed in RHS)...
     //
+    // 1) Terms from aSIP(u,ub): -nu*jump(u)*average(dn(ub)) + LocalPenalty*(jump(u)*jump(ub))
     + int1d(Th, surface)
     (
-     - 2*nu* u*dn(ub) // Why works for "-2"? (results are equal to CG)
+     nu*uSurface*dn(ub) - uSurface*(LocalPenalty)*ub
      )
-    + int1d(Th, surface) // Boundary terms from aSIP(u,ub)
-    (
-     + uSurface*(nu*dn(ub)-(LocalPenalty)*ub)
-     )
+    // // 2) Terms from aSIP(u,ub): -nu*average(dn(u))*jump(ub)
+    // //    Integrating by parts, we obtain +u*dn(ub)
+    // + int1d(Th, surface)
+    // (
+    //  2*nu*uSurface*dn(ub)
+    //  )
     ;
 
   problem HydStokes([uu,vv,pp], [uub,vvb,ppb]) =
@@ -157,24 +166,27 @@ for(int i=0; i<meshSizes.n; i++) {
 	       + nu*div(uu,vv)*dy(vvb) // dz(v) stabilization term
 	       + pEpsilon*pp*ppb
 	       )
-    //
-    // RHS: Weak boundary conditions...
-    //
-    + int1d(Th, surface, bottom, walls)
-    (
-     - nu*(dn(uu)*uub + dn(vv)*vvb)
-     )
-    + int1d(Th, surface, bottom, walls)
-    (
-     - nu*(uu*dn(uub) + vv*dn(vvb))
-     + BoundaryPenalty/hFace*(uu*uub + vv*vvb)
-     )
-    // RHS //
-    + int1d(Th, surface)
-    (
-     + nu*uSurface*dn(uub)
-     - (BoundaryPenalty/hFace)*uSurface*uub
-     )
+    + on(surface, uu=uSurface, vv=0)
+    + on(rWall, lWall, uu=0)
+    + on(bottom, uu=0, vv=0);
+    // //
+    // // RHS: Weak boundary conditions...
+    // //
+    // + int1d(Th, surface, bottom, walls)
+    // (
+    //  - nu*(dn(uu)*uub + dn(vv)*vvb)
+    //  )
+    // + int1d(Th, surface, bottom, walls)
+    // (
+    //  - nu*(uu*dn(uub) + vv*dn(vvb))
+    //  + BoundaryPenalty/hFace*(uu*uub + vv*vvb)
+    //  )
+    // // RHS //
+    // + int1d(Th, surface)
+    // (
+    //  + nu*uSurface*dn(uub)
+    //  - (BoundaryPenalty/hFace)*uSurface*uub
+    //  )
     ;
 
   //////////////
