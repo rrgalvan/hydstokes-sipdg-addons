@@ -32,7 +32,7 @@ func f1 = 0; // RHS / u
 func f2 = 0; // RHS / v
 real pEpsilon  = 1.0e-12; // Penalty epsilon in p-equations
 
-int [int] meshSizes= [32];
+int [int] meshSizes= [20];
 
 for(int i=0; i<meshSizes.n; i++) {
   int n = meshSizes[i];
@@ -134,12 +134,11 @@ for(int i=0; i<meshSizes.n; i++) {
     + bSIP1(ub,vb,p) + bSIP2(ub,vb,p) // Bilinear form b(.,.)
     - bSIP1(u,v,pb) - bSIP2(u,v,pb) // Bilinear form b(.,.)
     + sSIP(p, pb) // Penalización
-    // + int2d(Th)(pEpsilon*p*pb)
-
-    + int1d(Th, lWall, rWall)
-    (
-    - v*(LocalPenalty)*ub
-     )
+    + int2d(Th)(pEpsilon*p*pb)
+    // + int1d(Th, lWall, rWall)
+    // (
+    // - v*(LocalPenalty)*ub
+    //  )
 
     //
     // Boundary conditions (Weakly impossed in RHS)...
@@ -149,12 +148,14 @@ for(int i=0; i<meshSizes.n; i++) {
     (
      nu*uSurface*dn(ub) - uSurface*(LocalPenalty)*ub
      )
-    // // 2) Terms from aSIP(u,ub): -nu*average(dn(u))*jump(ub)
-    // //    Integrating by parts, we obtain +u*dn(ub)
-    // + int1d(Th, surface)
-    // (
-    //  2*nu*uSurface*dn(ub)
-    //  )
+
+    // 2) Terms from bSIP(u,ub):
+    // (En el test de la cavidad, son todos cero)
+
+    // 3) Terms from aSIP(v,vb) y bSIP(v,vb)
+    // -int1d(Th,walls)(
+    // Meter aquí condiciones Neumann para v sobre paredes laterales
+
     ;
 
   problem HydStokes([uu,vv,pp], [uub,vvb,ppb]) =
@@ -167,7 +168,7 @@ for(int i=0; i<meshSizes.n; i++) {
 	       + pEpsilon*pp*ppb
 	       )
     + on(surface, uu=uSurface, vv=0)
-    + on(rWall, lWall, uu=0)
+    + on(walls, uu=0)
     + on(bottom, uu=0, vv=0);
     // //
     // // RHS: Weak boundary conditions...
