@@ -54,8 +54,7 @@ for(int i=0; i<meshSizes.n; i++) {
   border surface(t=0,ix){ x=domainX1-t; y=domainY1;   }
   border lWall(t=0,iy)  { x=domainX0;   y=domainY1-t; label=walls;}
 
-  mesh Th=buildmesh( bottom(n) + rWall(n)
-		     + surface(n) + lWall(n) );
+  mesh Th=buildmesh( bottom(n) + rWall(n) + surface(n) + lWall(n) );
 
   int k = 1; // Degree of the polynomials (2 for P2dc ...)
   assert(k==1); // Assure to change the following lines...
@@ -97,8 +96,8 @@ for(int i=0; i<meshSizes.n; i++) {
      int2d(Th) ( viscosity * ( dx(u)*dx(ub) + dy(u)*dy(ub) ) )
      + intalledges(Th)
      (
-      - nu*( average(dn(u))*jump(ub) + jump(u)*average(dn(ub)) ) /nTonEdge
-      + LocalPenalty*(jump(u)*jump(ub))/nTonEdge
+      - viscosity*( average(dn(u))*jump(ub) + jump(u)*average(dn(ub)) ) /nTonEdge
+      + LocalPenalty*(jump(u)*jump(ub)) / nTonEdge
       )
      ) EndMacro;
   NewMacro aSIPv(v, vb, viscosity)
@@ -107,7 +106,7 @@ for(int i=0; i<meshSizes.n; i++) {
      + intalledges(Th)
      (
       - viscosity * ( average(dn(v))*jump(vb) + jump(v)*average(dn(vb)) ) /nTonEdge
-      + (LocalPenalty)*(jump(v)*jump(vb)) /nTonEdge
+      + (LocalPenalty)*(jump(v)*jump(vb)) / nTonEdge
       )
      ) EndMacro;
   NewMacro bSIP1(u,v,p)
@@ -130,31 +129,42 @@ for(int i=0; i<meshSizes.n; i++) {
   //////////////////////////////
 
   problem HydStokesSIP([u,v,p], [ub,vb,pb]) =
+    //
+    // 1.a) Bilinear form (mount all terms)
+    //
     aSIP(u, ub, nu) + aSIPv(v, vb, nu*dEpsilon2) // Bilinear form a(.,.)
     + bSIP1(ub,vb,p) + bSIP2(ub,vb,p) // Bilinear form b(.,.)
     - bSIP1(u,v,pb) - bSIP2(u,v,pb) // Bilinear form b(.,.)
     + sSIP(p, pb) // Penalización
     + int2d(Th)(pEpsilon*p*pb)
-    // + int1d(Th, lWall, rWall)
-    // (
-    // - v*(LocalPenalty)*ub
-    //  )
-
     //
-    // Boundary conditions (Weakly impossed in RHS)...
+    // 1.b) Bilinear form (delete flux and penalty on Neumann boundaries)
     //
-    // 1) Terms from aSIP(u,ub): -nu*jump(u)*average(dn(ub)) + LocalPenalty*(jump(u)*jump(ub))
-    + int1d(Th, surface)
+    // 1.b.1) Neumann b.c. for v on walls
+    - int1d(Th, walls)
     (
-     nu*uSurface*dn(ub) - uSurface*(LocalPenalty)*ub
+      - nu*dEpsilon2*( dn(v)*vb + v*dn(vb) )
+      + LocalPenalty*(v*vb)
      )
 
-    // 2) Terms from bSIP(u,ub):
-    // (En el test de la cavidad, son todos cero)
+    //
+    // 2.a) Neumann boundary conditions
+    //
+    // 2.a.1) Neumann b.c. for v on walls
+    + int1d(Th, surface) ( 0.0*vb )
 
-    // 3) Terms from aSIP(v,vb) y bSIP(v,vb)
-    // -int1d(Th,walls)(
-    // Meter aquí condiciones Neumann para v sobre paredes laterales
+    //
+    // 2.b) Dirichlet boundary conditions
+    //
+    // 2.b.1) Dirichlet b.c. for u on surface
+    - int1d(Th, surface) ( uSurface*dn(ub) + LocalPenalty*uSurface*ub
+			   - uSurface*N.x*pb )
+    // 2.b.2) Dirichlet b.c. for u on walls & bottom
+    - int1d(Th, walls, bottom) ( 0.0*dn(ub) + LocalPenalty*0.0*ub
+				 - 0.0*N.x*pb )
+    // 2.b.3) Dirichlet b.c. for v on surface & bottom
+    - int1d(Th, surface, bottom) ( 0.0*dn(vb) + LocalPenalty*0.0*ub
+				   - 0.0*N.y*pb )
 
     ;
 
@@ -226,14 +236,15 @@ for(int i=0; i<meshSizes.n; i++) {
   // cout << "Residual (CG): " << int2d(Th)(dx(uu)*dx(uu) +
   // dy(uu)*dy(uu) - int2d(Th)(f*uu)) << endl;
 
-  real divDG = int2d(Th)(div(u,v)), divCG = int2d(Th)(div(uu,vv));
+  real divDG = sqrt(int2d(Th)(div(u,v)*div(u,v))),
+    divCG = sqrt(int2d(Th)(div(uu,vv)*div(uu,vv)));
   cout << " Divergence (integral in L2)... CG/DG: " << divCG << " / " << divDG << endl;
   real kinDG = 0.5*sqrt(int2d(Th)(square(u)+square(v)));
   real kinCG = 0.5*sqrt(int2d(Th)(square(uu)+square(vv)));
   cout << " Kinetic Energy................ CG/DG: " << kinCG << " / " << kinDG << endl;
-  real pDG = abs(int2d(Th)((p)));
-  real pCG = abs(int2d(Th)((pp)));
-  cout << " Pressure (squared norm)....... CG/DG: " << pCG << " / " << pDG << endl;
+  real pDG = sqrt(int2d(Th)(square(dy(p))));
+  real pCG = sqrt(int2d(Th)(square(dy(pp))));
+  cout << " Pressure (dz(p) in L2)....... CG/DG: " << pCG << " / " << pDG << endl;
 
   bool saveVTK=true; if(saveVTK) {
     load "iovtk";
