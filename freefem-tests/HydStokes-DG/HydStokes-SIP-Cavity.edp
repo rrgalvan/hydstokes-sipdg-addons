@@ -179,24 +179,6 @@ for(int i=0; i<meshSizes.n; i++) {
     + on(surface, uu=uSurface, vv=0)
     + on(walls, uu=0)
     + on(bottom, uu=0, vv=0);
-    // //
-    // // RHS: Weak boundary conditions...
-    // //
-    // + int1d(Th, surface, bottom, walls)
-    // (
-    //  - nu*(dn(uu)*uub + dn(vv)*vvb)
-    //  )
-    // + int1d(Th, surface, bottom, walls)
-    // (
-    //  - nu*(uu*dn(uub) + vv*dn(vvb))
-    //  + BoundaryPenalty/hFace*(uu*uub + vv*vvb)
-    //  )
-    // // RHS //
-    // + int1d(Th, surface)
-    // (
-    //  + nu*uSurface*dn(uub)
-    //  - (BoundaryPenalty/hFace)*uSurface*uub
-    //  )
     ;
 
   //////////////
@@ -237,13 +219,27 @@ for(int i=0; i<meshSizes.n; i++) {
 
   real divDG = sqrt(int2d(Th)(div(u,v)*div(u,v)));
   real divCG = sqrt(int2d(Th)(div(uu,vv)*div(uu,vv)));
-  cout << " Divergence (integral in L2)... CG/DG: " << divCG << " / " << divDG << endl;
+  cout << " Divergence (L2 norm)... CG/DG: " << divCG << " / " << divDG << endl;
   real kinDG = 0.5*sqrt(int2d(Th)(square(u)+square(v)));
   real kinCG = 0.5*sqrt(int2d(Th)(square(uu)+square(vv)));
   cout << " Kinetic Energy................ CG/DG: " << kinCG << " / " << kinDG << endl;
   real pDG = sqrt(int2d(Th)(square(dy(p))));
   real pCG = sqrt(int2d(Th)(square(dy(pp))));
-  cout << " Pressure (dz(p) in L2)....... CG/DG: " << pCG << " / " << pDG << endl;
+  cout << " Pressure (dz(p), L2 norm)....... CG/DG: " << pCG << " / " << pDG << endl;
+
+  cout << "Boundary conditions (L2 residuals):" << endl;
+  real errUsurf = sqrt(int1d(Th,surface)(square(u-uSurface)));
+  real errUwalls = sqrt(int1d(Th,walls)(square(u-0)));
+  real errUbottom = sqrt(int1d(Th,bottom)(square(u-0)));
+  cout << "  * u on surface: " << errUsurf << endl;
+  cout << "  * u on walls: "  << errUwalls << endl;
+  cout << "  * u on bottom: " << errUbottom << endl;
+  real errVsurf = sqrt(int1d(Th,surface)(square(v-0)));
+  real errDNVwalls = sqrt(int1d(Th,walls)(square(dn(v))));
+  real errVbottom = sqrt(int1d(Th,bottom)(square(v-0)));
+  cout << "  * v on surface: " << errVsurf << endl;
+  cout << "  * dn(v) on walls: "  << errDNVwalls << endl;
+  cout << "  * v on bottom: " << errVbottom << endl;
 
   int[int] orders = [1,1];
   bool saveVTK=true; if(saveVTK) {
