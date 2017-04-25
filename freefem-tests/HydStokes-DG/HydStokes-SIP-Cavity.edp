@@ -12,9 +12,9 @@
 verbosity=0;
 int interactive=1; // If 1: plot results
 
-string testDescription="HydStokes_P1P1_eps=0";
+string testDescription="HydStokes_P1P1DG_eps=0";
 
-real SIPPenalty=5.0e+1; // Penalty to achieve coercivity in DG SIP forms
+real SIPPenalty=1.0e+2; // Penalty to achieve coercivity in DG SIP forms
 real nu=1.0;
 real domainEpsilon = 0; //10^exp;
 real dEpsilon2 = domainEpsilon*domainEpsilon;
@@ -99,15 +99,6 @@ for(int i=0; i<meshSizes.n; i++) {
       + LocalPenalty*(jump(u)*jump(ub)) / nTonEdge
       )
      ) EndMacro;
-  NewMacro aSIPv(v, vb, viscosity)
-    (
-     int2d(Th) ( viscosity * ( dx(v)*dx(vb) + dy(v)*dy(vb) ) )
-     + intalledges(Th)
-     (
-      - viscosity * ( average(dn(v))*jump(vb) + jump(v)*average(dn(vb)) ) /nTonEdge
-      + (LocalPenalty)*(jump(v)*jump(vb)) / nTonEdge
-      )
-     ) EndMacro;
   NewMacro bSIP1(u,v,p)
     int2d(Th)( -p*(div(u,v)) )
     EndMacro;
@@ -120,7 +111,6 @@ for(int i=0; i<meshSizes.n; i++) {
     intalledges(Th)
     (
      (nTonEdge-1)*hFace*jump(q)*jump(r)
-     // hFace*jump(q)*jump(r) /nTonEdge
      ) EndMacro;
 
   //////////////////////////////
@@ -129,9 +119,9 @@ for(int i=0; i<meshSizes.n; i++) {
 
   problem HydStokesSIP([u,v,p], [ub,vb,pb]) =
     //
-    // 1.a) Bilinear form (mount all terms)
+    // 1.a) Bilinear form (mount all terms) -----------------------------------
     //
-    aSIP(u, ub, nu) + aSIPv(v, vb, nu*dEpsilon2) // Bilinear form a(.,.)
+    aSIP(u, ub, nu) + aSIP(v, vb, nu*dEpsilon2) // Bilinear form a(.,.)
     + bSIP1(ub,vb,p) + bSIP2(ub,vb,p) // Bilinear form b(.,.)
     - bSIP1(u,v,pb) - bSIP2(u,v,pb) // Bilinear form b(.,.)
     + sSIP(p, pb) // Penalización
@@ -142,30 +132,36 @@ for(int i=0; i<meshSizes.n; i++) {
     // 1.b.1) Neumann b.c. for v on walls
     - int1d(Th, walls)
     (
-      - nu*dEpsilon2*( dn(v)*vb + v*dn(vb) )
-      + LocalPenalty*(v*vb)
+     - nu*dEpsilon2*( dn(v)*vb + v*dn(vb) )
+     + LocalPenalty*(v*vb)
+     )
+    + int1d(Th,walls)
+    (
+     v*N.y*pb-vb*N.y*p
      )
 
     //
-    // 2.a) Neumann boundary conditions
+    // 2.a) Neumann boundary conditions ------------------------------------------
     //
     // 2.a.1) Neumann b.c. for v on walls
-    + int1d(Th, surface) ( 0.0*vb )
+    // - int1d(Th, walls) ( nu*dEpsilon2*0.0*ub )
+    - int1d(Th, walls) ( nu*dEpsilon2*0.0*vb )
 
     //
     // 2.b) Dirichlet boundary conditions
     //
     // 2.b.1) Dirichlet b.c. for u on surface
     - int1d(Th, surface) ( uSurface*dn(ub) + LocalPenalty*uSurface*ub
-			   - uSurface*N.x*pb )
-    // 2.b.2) Dirichlet b.c. for u on walls & bottom
+			   - uSurface*N.x*pb
+			   )
+    // 2.b.2) Dirichlet b.c. for u on bottom & walls
     - int1d(Th, walls, bottom) ( 0.0*dn(ub) + LocalPenalty*0.0*ub
 				 - 0.0*N.x*pb )
     // 2.b.3) Dirichlet b.c. for v on surface & bottom
     - int1d(Th, surface, bottom) ( 0.0*dn(vb) + LocalPenalty*0.0*ub
 				   - 0.0*N.y*pb )
 
-    ;
+    ; //---------------------------------------------------------------------------
 
   problem HydStokes([uu,vv,pp], [uub,vvb,ppb]) =
     int2d(Th) (
