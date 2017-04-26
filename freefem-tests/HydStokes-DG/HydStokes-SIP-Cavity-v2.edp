@@ -13,7 +13,7 @@ verbosity=0;
 int interactive=1; // If 1: plot results
 
 string testDescription="HydStokes_P1P1_eps=1";
-real SIPPenalty=5.0e+2; // Penalty to achieve coercivity in DG SIP forms
+real SIPPenalty=2.0e+2; // Penalty to achieve coercivity in DG SIP forms
 real nu=1.0;
 real domainEpsilon = 1.e-0; //10^exp;
 real dEpsilon2 = domainEpsilon*domainEpsilon;
@@ -28,7 +28,7 @@ func uSurface = x*(1-x); // Horizontal surface velocity in cavity test
 // func uSurface=1;
 func f1 = 0; // RHS / u
 func f2 = 0; // RHS / v
-real pEpsilon  = 1.0e-10; // Penalty epsilon in p-equations
+real pEpsilon  = 1.0e-7; // Penalty epsilon in p-equations
 
 int [int] meshSizes= [30];
 
@@ -137,48 +137,41 @@ for(int i=0; i<meshSizes.n; i++) {
     - bSIP1(u,v,pb) - bSIP2(u,v,pb) // Bilinear form b(.,.)
     + sSIP(p, pb) // Penalización
     + int2d(Th)(pEpsilon*p*pb)
-    // - int1d(Th, surface) (
-    //  -uSurface*dn(ub)
-    //  )
-    // - int1d(Th, surface)
-    // (
-    //  (LocalPenalty)*uSurface*ub
-    //  )
     //
     // 2) Bilinear form a(.,.): remove Dirichlet or Neumann b.c. if not imposed
     //
     // 2.1) u on surface, walls & bottom: Dirichlet b.c. (eliminate Neumann terms)
-    - int1d(Th, surface) (nu * dn(u)*ub)
-    - int1d(Th, walls, bottom) (nu * dn(u)*ub)
+    - int1d(Th, surface, walls, bottom) (-nu * dn(u)*ub)
     // 2.2) v on surface & bottom: Dirichlet b.c. (eliminate Neumann terms)
-    - int1d(Th, surface, bottom) ( nu*dEpsilon2 * dn(v)*vb)
+    - int1d(Th, surface, bottom) ( -nu*dEpsilon2 * dn(v)*vb)
     // 2.3) v on walls: Neumann b.c. (eliminate Dirichlet terms)
-    - int1d(Th, walls)  ( nu*dEpsilon2 * v*dn(vb)
-    			  - LocalPenalty*(dEpsilon2*(v*N.x)*(vb*N.x)+
-					  (v*N.y)*(vb*N.y)) )
+    - int1d(Th, walls)  ( + nu*dEpsilon2 * v*dn(vb)
+    			  + LocalPenalty*(dEpsilon2*(v*N.x)*(vb*N.x)+
+    					  (v*N.y)*(vb*N.y)) )
     //
     // 3) Boundary conditions from a(.,.)
     //
-    // 3.1) u on surface, walls & bottom: Dirichlet b.c.
-    + int1d(Th, surface) (nu * uSurface*dn(ub)
-    			  - LocalPenalty * uSurface*ub)
-    + int1d(Th, walls, bottom) (nu * 0.0*dn(ub)
-    				- LocalPenalty * 0*ub)
-    // 2.a.2) v on surface & bottom: Dirichlet b.c.
-    + int1d(Th, surface, bottom) ( nu*dEpsilon2 * 0.0*dn(vb)
-    				   - LocalPenalty*(dEpsilon2*(0*N.x)*(vb*N.x)+
+    // 3.1) u on walls: Dirichlet b.c. (u=uSurface)
+    - int1d(Th, surface) (-nu * uSurface*dn(ub)
+    			  + LocalPenalty * uSurface*ub)
+    // 3.1) u on surface & bottom: Dirichlet b.c. (u=0)
+    - int1d(Th, walls, bottom) (-nu * 0.0*dn(ub)
+    				+ LocalPenalty * 0*ub)
+    // 3.3) v on surface & bottom: Dirichlet b.c. (v=0)
+    - int1d(Th, surface, bottom) ( -nu*dEpsilon2 * 0.0*dn(vb)
+    				   + LocalPenalty*(dEpsilon2*(0*N.x)*(vb*N.x)+
     						   (0*N.y)*(vb*N.y)) )
-    // 2.a.2) v on walls: Neumann b.c.
-    + int1d(Th, walls) (nu*dEpsilon2 * 0*vb)
+    // 3.4) v on walls: Neumann b.c.( dn(v)=0 )
+    - int1d(Th, walls) (-nu*dEpsilon2 * 0*vb)
 
-    // //
-    // // 1.b) Bilinear form b(.,.): delete Dirichlet or Neumann b.c. which no are imposed
-    // //
-    // 1.b.1) v on  walls: Neumann b.c. (eliminate Dirichlet terms)
-    + int1d(Th,walls)(  p*(ub*N.x+vb*N.y) )
+    //
+    // 4) Bilinear form b(.,.): delete Dirichlet or Neumann b.c. which no are imposed
+    //
+    // 4.1) v on  walls: Neumann b.c. (eliminate Dirichlet terms)
+    // + int1d(Th,walls)( p*(ub*N.x+vb*N.y) )
     // - int1d(Th,walls)(  pb*(u*N.x+v*N.y) )
 
-    // // 2.b) Boundary conditions from b(.,.)
+    // 4.2) Boundary conditions from b(.,.)
     // + int1d(Th,walls) ( pb*0.0*N.x )
     ;
 
@@ -260,9 +253,11 @@ for(int i=0; i<meshSizes.n; i++) {
   cout << "  * u on bottom: " << errUbottom << endl;
   real errVsurf = sqrt(int1d(Th,surface)(square(v-0)));
   real errDNVwalls = sqrt(int1d(Th,walls)(square(dn(v))));
+  real vWalls = sqrt(int1d(Th,walls)(square(v)));
   real errVbottom = sqrt(int1d(Th,bottom)(square(v-0)));
   cout << "  * v on surface: " << errVsurf << endl;
   cout << "  * dn(v) on walls: "  << errDNVwalls << endl;
+  cout << "     * ||v||_0 on walls: " << vWalls << endl;
   cout << "  * v on bottom: " << errVbottom << endl;
 
   int[int] orders = [1,1];
