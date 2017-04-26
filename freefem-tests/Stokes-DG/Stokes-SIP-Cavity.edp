@@ -28,7 +28,7 @@ func f1 = 0; // RHS / u
 func f2 = 0; // RHS / v
 real pEpsilon  = 1.0e-10; // Penalty epsilon in p-equations
 
-int [int] meshSizes= [32];
+int [int] meshSizes= [48];
 
 for(int i=0; i<meshSizes.n; i++) {
   int n = meshSizes[i];
@@ -116,21 +116,46 @@ for(int i=0; i<meshSizes.n; i++) {
   //////////////////////////////
 
   problem StokesSIP([u,v,p], [ub,vb,pb]) =
+    // 1) Bilinear form (mount all terms)
     aSIP(u,ub) + aSIP(v,vb) // Bilinear form a(.,.)
     + bSIP1(ub,vb,p) + bSIP2(ub,vb,p) // Bilinear form b(.,.)
     - bSIP1(u,v,pb) - bSIP2(u,v,pb) // Bilinear form b(.,.)
     + sSIP(p, pb) // Stabilization
-    // + int2d(Th)(pEpsilon*p*pb)
+    + int2d(Th)(pEpsilon*p*pb)
+    // //
+    // // RHS: Weak boundary conditions...
+    // //
+    // - int1d(Th, surface) (
+    //  -uSurface*dn(ub)
+    //  )
+    // - int1d(Th, surface)
+    // (
+    //  (LocalPenalty)*uSurface*ub
+    //  )
     //
-    // RHS: Weak boundary conditions...
+    // 2) Bilinear form a(.,.): remove Dirichlet or Neumann b.c. if not imposed
     //
-    - int1d(Th, surface) (
-     -uSurface*dn(ub)
-     )
-    - int1d(Th, surface)
-    (
-     (LocalPenalty)*uSurface*ub
-     )
+    // 2.1) u on surface, walls & bottom: Dirichlet b.c. (eliminate Neumann terms)
+    - int1d(Th, surface) (nu * dn(u)*ub)
+    - int1d(Th, walls, bottom) (nu * dn(u)*ub)
+    // 2.2) v on surface & bottom: Dirichlet b.c. (eliminate Neumann terms)
+    - int1d(Th, surface, bottom) ( nu * dn(v)*vb)
+    // 2.3) v on walls: Neumann b.c. (eliminate Dirichlet terms)
+    - int1d(Th, walls)  ( nu * v*dn(vb)
+    			  - LocalPenalty* v*vb )
+    //
+    // 3) Boundary conditions from a(.,.)
+    //
+    // 3.1) u on surface, walls & bottom: Dirichlet b.c.
+    - int1d(Th, surface) (nu * uSurface*dn(ub)
+    			  - LocalPenalty * uSurface*ub)
+    - int1d(Th, walls, bottom) (nu * 0.0*dn(ub)
+    				- LocalPenalty * 0*ub)
+    // 2.a.2) v on surface & bottom: Dirichlet b.c.
+    - int1d(Th, surface, bottom) ( nu * 0.0*dn(vb)
+    				   - LocalPenalty * 0*vb )
+    // 2.a.2) v on walls: Neumann b.c.
+    - int1d(Th, walls) (0*vb)
     // - int1d(Th, surface) // - bSIP2(u,v,pb)
     // (
     //  - uSurface*N.x*pb // =0 because N.x=0 on surface
