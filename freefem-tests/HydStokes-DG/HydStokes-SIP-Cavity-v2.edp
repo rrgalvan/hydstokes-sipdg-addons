@@ -12,11 +12,12 @@
 verbosity=0;
 int interactive=1; // If 1: plot results
 
-string testDescription="HydStokes_P1P1_eps=1";
-real SIPPenalty=2.0e+2; // Penalty to achieve coercivity in DG SIP forms
+// real SIPPenalty=2.0e+2; // Penalty to achieve coercivity in DG SIP forms
+real SIPPenalty=1.0e+2; // Penalty to achieve coercivity in DG SIP forms
 real nu=1.0;
-real domainEpsilon = 1.e-0; //10^exp;
+real domainEpsilon = 0.e-0; //10^exp;
 real dEpsilon2 = domainEpsilon*domainEpsilon;
+string testDescription="HydStokes_P1P1_sip=" + SIPPenalty + "_eps=" + domainEpsilon;
 
 // macro hFace() (1.0/sqrt(n)) // An approximation of h_F (length of face)
 macro hFace() (lenEdge) // An approximation of h_F (length of face)
@@ -28,7 +29,7 @@ func uSurface = x*(1-x); // Horizontal surface velocity in cavity test
 // func uSurface=1;
 func f1 = 0; // RHS / u
 func f2 = 0; // RHS / v
-real pEpsilon  = 1.0e-7; // Penalty epsilon in p-equations
+real pEpsilon  = 1.0e-12; // Penalty epsilon in p-equations
 
 int [int] meshSizes= [30];
 
@@ -145,9 +146,9 @@ for(int i=0; i<meshSizes.n; i++) {
     // 2.2) v on surface & bottom: Dirichlet b.c. (eliminate Neumann terms)
     - int1d(Th, surface, bottom) ( -nu*dEpsilon2 * dn(v)*vb)
     // 2.3) v on walls: Neumann b.c. (eliminate Dirichlet terms)
-    - int1d(Th, walls)  ( + nu*dEpsilon2 * v*dn(vb)
-    			  + LocalPenalty*(dEpsilon2*(v*N.x)*(vb*N.x)+
-    					  (v*N.y)*(vb*N.y)) )
+    - int1d(Th, walls) ( + nu*dEpsilon2 * v*dn(vb)
+    			 + LocalPenalty*(dEpsilon2*(v*N.x)*(vb*N.x)+
+					 (v*N.y)*(vb*N.y)) )
     //
     // 3) Boundary conditions from a(.,.)
     //
@@ -168,7 +169,7 @@ for(int i=0; i<meshSizes.n; i++) {
     // 4) Bilinear form b(.,.): delete Dirichlet or Neumann b.c. which no are imposed
     //
     // 4.1) v on  walls: Neumann b.c. (eliminate Dirichlet terms)
-    // + int1d(Th,walls)( p*(ub*N.x+vb*N.y) )
+    + int1d(Th,walls)( p*(ub*N.x+vb*N.y) )
     // - int1d(Th,walls)(  pb*(u*N.x+v*N.y) )
 
     // 4.2) Boundary conditions from b(.,.)
@@ -263,15 +264,17 @@ for(int i=0; i<meshSizes.n; i++) {
   int[int] orders = [1,1];
   bool saveVTK=true; if(saveVTK) {
     load "iovtk";
-    savevtk("/tmp/DG" + testDescription + "_n=" + n + ".vtk",
+    savevtk("DG" + testDescription + "_n=" + n + ".vtk",
 	    Th,
 	    [u,v,0],
 	    p,
-	    dataname="Velocity_DG Pressure_DG"); //, order=orders) ;
-    savevtk("/tmp/CG" + testDescription + "_n=" + n + ".vtk",
+	    dataname="Velocity_DG_eps=" + domainEpsilon
+	    + " Pressure_DG_eps=" + domainEpsilon); //, order=orders) ;
+    savevtk("CG" + testDescription + "_n=" + n + ".vtk",
 	    Th,
 	    [uu,vv,0],
 	    pp,
-	    dataname="Velocity_CG Pressure_CG"); //, order=orders) ;
+	    dataname="Velocity_CG_eps=" + domainEpsilon
+	    + " Pressure_CG_eps=" + domainEpsilon); //, order=orders) ;
   }
  }
