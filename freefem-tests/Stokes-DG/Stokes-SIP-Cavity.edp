@@ -162,7 +162,8 @@ for(int i=0; i<meshSizes.n; i++) {
     //  + nu*uSurface*dn(uub)
     //  - (BoundaryPenalty/hFace)*uSurface*uub
     //  )
-    + on(bottom, walls, uu=0, vv=0)
+    + on(bottom, uu=0, vv=0)
+    + on(walls, uu=0)
     + on(surface, uu=uSurface, vv=0);
     ;
 
@@ -220,7 +221,11 @@ for(int i=0; i<meshSizes.n; i++) {
   cout << "CG time:     " << time1-time0 << endl;
 
   if(interactive) plot(p,[u,v], cmm="DG pressure-mesh_size=" + n ,wait=1,value=1,fill=1);
+  if(interactive) plot(u, cmm="DG, u, pressure-mesh_size=" + n ,wait=1,value=1,fill=1);
+  if(interactive) plot(v, cmm="DG, v, pressure-mesh_size=" + n ,wait=1,value=1,fill=1);
   if(interactive) plot(pp,[uu,vv], cmm="CG pressure-mesh_size=" + n ,wait=1,value=1,fill=1);
+  if(interactive) plot(uu, cmm="CG, u, pressure-mesh_size=" + n ,wait=1,value=1,fill=1);
+  if(interactive) plot(vv, cmm="CG, v, pressure-mesh_size=" + n ,wait=1,value=1,fill=1);
 
   // cout << "Residual (DG): " << int2d(Th,qforder=qfo)(dx(u)*dx(u) +
   // dy(u)*dy(u) - int2d(Th)(f*u)) << endl;
