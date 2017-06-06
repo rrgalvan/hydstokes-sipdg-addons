@@ -15,9 +15,9 @@ int interactive=1; // If 1: plot results
 // real SIPPenalty=2.0e+2; // Penalty to achieve coercivity in DG SIP forms
 real SIPPenalty=1.0e+2; // Penalty to achieve coercivity in DG SIP forms
 real nu=1.0;
-real domainEpsilon = 0.e-0; //10^exp;
+real domainEpsilon = 1.e-4; //10^exp;
 real dEpsilon2 = domainEpsilon*domainEpsilon;
-string testDescription="HydStokes_P1P1_sip=" + SIPPenalty + "_eps=" + domainEpsilon;
+string testDescription="HydStokes_P1P1_sip=" + SIPPenalty + "_eps=" + dEpsilon2;
 
 // macro hFace() (1.0/sqrt(n)) // An approximation of h_F (length of face)
 macro hFace() (lenEdge) // An approximation of h_F (length of face)
@@ -264,17 +264,17 @@ for(int i=0; i<meshSizes.n; i++) {
   int[int] orders = [1,1];
   bool saveVTK=true; if(saveVTK) {
     load "iovtk";
-    savevtk("DG" + testDescription + "_n=" + n + ".vtk",
+    savevtk("/tmp/DG" + testDescription + "_n=" + n + ".vtk",
 	    Th,
 	    [u,v,0],
 	    p,
 	    dataname="Velocity_DG_eps=" + domainEpsilon
-	    + " Pressure_DG_eps=" + domainEpsilon); //, order=orders) ;
-    savevtk("CG" + testDescription + "_n=" + n + ".vtk",
+	    + " Pressure_DG_eps=" + dEpsilon2); //, order=orders) ;
+    savevtk("/tmp/CG" + testDescription + "_n=" + n + ".vtk",
 	    Th,
 	    [uu,vv,0],
 	    pp,
 	    dataname="Velocity_CG_eps=" + domainEpsilon
-	    + " Pressure_CG_eps=" + domainEpsilon); //, order=orders) ;
+	    + " Pressure_CG_eps=" + dEpsilon2); //, order=orders) ;
   }
  }
