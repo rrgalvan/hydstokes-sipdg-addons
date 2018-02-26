@@ -1,4 +1,4 @@
-// Discontinous Galerlin SIP Method for solve
+// Discontinous Galerlin SIP Method for solving
 //
 //  $ -\Delta u = f$ on $\Omega$ and $u=g$ on $\Gamma$
 //
@@ -7,10 +7,10 @@
 //
 // J. Rafael Rodr\'iguez Galv\'an
 
-load "Element_P3"
-load "Element_P4"
-load "Element_P3dc"
-load "Element_P4dc"
+// load "Element_P3"
+// load "Element_P4"
+// load "Element_P3dc"
+// load "Element_P4dc"
 
 ////////////////
 // Parameters //
@@ -45,8 +45,8 @@ for(int i=0; i<meshSizes.n; i++) {
   mesh Th = buildmesh (C(n));
   if(interactive) {plot(Th);}
 
-  int k = 2; // Degree of the polynomials (2 for P2dc ...)
-  assert(k==2);
+  int k = 1; // Degree of the polynomials (2 for P2dc ...)
+  assert(k==1);
   func PkDG = P1dc;  // Discontinuous Pk
   func PkCG = P1;  // Continuous Pk
   int qfo =2*k+1;  // Order of quadrature formula

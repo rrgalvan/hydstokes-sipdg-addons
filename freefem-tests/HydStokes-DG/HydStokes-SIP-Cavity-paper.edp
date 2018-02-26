@@ -13,8 +13,8 @@ verbosity=0;
 int interactive=1; // If 1: plot results
 
 real nu=1;
-real SIPPenalty=nu*1.0e+2; // Penalty to achieve coercivity in DG SIP forms
-real domainEpsilon = 1.e-1; //1e-4;
+real SIPPenalty=nu*5; // Penalty to achieve coercivity in DG SIP forms
+real domainEpsilon = 0.e-4; //1e-4;
 string testDescription="HydStokes_P1P1DG_eps=0";
 real dEps2 = domainEpsilon*domainEpsilon;
 
@@ -77,7 +77,7 @@ NewMacro aSIP(u, ub, coefficient)
    int2d(Th) ( (coefficient)*nu * ( dx(u)*dx(ub) + dy(u)*dy(ub) ) )
    + intalledges(Th)
    (
-    - (coefficient)*nu * ( average(dn(u))*jump(ub) + jump(u)*average(dn(ub)) ) / nTonEdge
+    + (coefficient)*nu * ( average(dn(u))*jump(ub) + jump(u)*average(dn(ub)) ) / nTonEdge
     + (coefficient) * (SIPPenalty/lenEdge)*(jump(u)*jump(ub)) / nTonEdge
     )
    ) EndMacro;
@@ -88,7 +88,7 @@ NewMacro bSIP2(u,v,p)
   intalledges(Th)
   (
    // (nTonEdge-1)*(jump(u)*N.x + jump(v)*N.y)*average(p)
-   (jump(u)*N.x + jump(v)*N.y)*average(p) /nTonEdge
+   -(jump(u)*N.x + jump(v)*N.y)*average(p) /nTonEdge
    ) EndMacro;
 NewMacro shV(v, vb, coefficient)
   intalledges(Th)
@@ -127,7 +127,7 @@ problem HydStokesSIP([u,v,p], [ub,vb,pb]) =
   //
 
   // 1.b.1) On wall boundaries, we have neumann b.c. for v (non Dirichlet)
-  + int1d(Th, walls)
+  - int1d(Th, walls)
   (
    dEps2 * ( - nu*v*dn(vb) + (SIPPenalty/lenEdge)*(v*vb) ) // from aSIP(v,vb)
    + (1-dEps2)/lenEdge * (v*N.y*vb*N.y) // from +(1-eps)*sh(v,bv)
@@ -135,7 +135,7 @@ problem HydStokesSIP([u,v,p], [ub,vb,pb]) =
    )
 
   // 1.b.2) We have no b. condition for p in any boundary
-  + int1d(Th, surface, bottom, walls)
+  - int1d(Th, surface, bottom, walls)
   (
     (ub*N.x+vb*N.y)*p // from +b(wb,p)
    )
@@ -146,13 +146,13 @@ problem HydStokesSIP([u,v,p], [ub,vb,pb]) =
   //
 
   // 1.c.1) On surface and bottom boundaries, we have diriclet b.c. for u,v
-  + int1d(Th, surface, bottom)
+  - int1d(Th, surface, bottom)
   (
    - nu *       ( dn(u)*ub )  // from aSIP(u,ub)
    - nu*dEps2 * ( dn(v)*vb )  // from aSIP(v,vb)
    )
   // 1.c.2) On wall boundaries, we have diriclet b.c. for u
-  + int1d(Th, walls)
+  - int1d(Th, walls)
   (
    - nu *       ( dn(u)*ub )  // from aSIP(u,ub)
    )
