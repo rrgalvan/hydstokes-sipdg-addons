@@ -15,7 +15,7 @@ int interactive=1; // If 1: plot results
 real nu=1;
 real SIPPenalty=nu*5; // Penalty to achieve coercivity in DG SIP forms
 real domainEpsilon = 0.e-4; //1e-4;
-string testDescription="HydStokes_P1P1DG_eps=0";
+string testDescription="HydStokes_P1P1DG_eps=" + domainEpsilon;
 real dEps2 = domainEpsilon*domainEpsilon;
 
 func uSurface = x*(1-x); // Horizontal surface velocity in cavity test
