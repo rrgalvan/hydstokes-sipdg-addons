@@ -20,7 +20,7 @@ load "Element_P4dc"
 verbosity=0;
 int interactive=0; // If 1: plot results
 
-real SIPPenalty=1.0e+4; // DG Penalty (to achieve coercivity)
+real SIPPenalty=5.0e+0; // DG Penalty (to achieve coercivity)
 real nu=1.; // Horizontal viscosity coefficient
 
 real domainEpsilon = 1.e-7; // Domain Epsilon
@@ -35,7 +35,7 @@ macro LocalPenalty() (SIPPenalty/hFace) // EOM
 include "exact-sol-HydStokes-steady.idp"
 func f1 = f1Exact; // RHS / u
 func f2 = f2Exact; // RHS / v
-real pEpsilon  = 1.0e-9; // Penalty epsilon in p-equations
+real pEpsilon  = 1.0e-15; // Penalty epsilon in p-equations
 
 real[int] uErrL2(2), uErrH1(2), vErrL2(2), vErrH1(2), pErrL2(2); // Errors in 2 time steps (for orders)
 real[int] uuErrL2(2), uuErrH1(2), ppErrL2(2); // Errors in 2 time steps (for orders)
@@ -92,7 +92,7 @@ for(int i=0; i<meshSizes.n; i++) {
      int2d(Th) ( nu * ( dx(u)*dx(ub) + dy(u)*dy(ub) ) )
      + intalledges(Th)
      (
-      - nu*( average(dn(u))*jump(ub) + jump(u)*average(dn(ub)) ) /nTonEdge
+      nu*( average(dn(u))*jump(ub) + jump(u)*average(dn(ub)) ) /nTonEdge
       + LocalPenalty*(jump(u)*jump(ub))/nTonEdge
       )
      ) EndMacro;
@@ -101,10 +101,14 @@ for(int i=0; i<meshSizes.n; i++) {
      int2d(Th) ( nu*dEpsilon2 * ( dx(v)*dx(vb) + dy(v)*dy(vb) ) )
      + intalledges(Th)
      (
-      // dEpsilon2*PenaltyParameter*(jump(v)*jump(vb)) /nTonEdge
       nu*dEpsilon2*( average(dn(v))*jump(vb) + jump(v)*average(dn(vb)) ) /nTonEdge
       + (LocalPenalty)*(jump(v)*jump(vb))/nTonEdge
       )
+     ) EndMacro;
+  NewMacro shV(v, vb, coefficient)
+    intalledges(Th)
+    (
+     (coefficient)/lenEdge * (jump(v)*jump(vb)*N.y*N.y) / nTonEdge
      ) EndMacro;
   NewMacro bSIP1(u,v,p)
     int2d(Th)( -p*(div(u,v)) )
@@ -117,7 +121,7 @@ for(int i=0; i<meshSizes.n; i++) {
   NewMacro sSIP(q,r)
     intalledges(Th)
     (
-     (nTonEdge-1)*hFace*jump(q)*jump(r)
+     (nTonEdge-1)*hFace*jump(q)*jump(r) / nTonEdge
      ) EndMacro;
 
   //////////////////////////////
@@ -125,7 +129,7 @@ for(int i=0; i<meshSizes.n; i++) {
   //////////////////////////////
 
   problem HydStokesSIP([u,v,p], [ub,vb,pb]) =
-    aUSIP(u,ub) + aVSIP(v,vb) // Bilinear form a(.,.)
+    aUSIP(u,ub) + aVSIP(v,vb) + shV(v, vb, (1-dEpsilon2)) // Bilinear form a(.,.)
     + bSIP1(ub,vb,p) + bSIP2(ub,vb,p) // Bilinear form b(.,.)
     - bSIP1(u,v,pb) - bSIP2(u,v,pb) // Bilinear form b(.,.)
     + sSIP(p, pb) // Stabilization

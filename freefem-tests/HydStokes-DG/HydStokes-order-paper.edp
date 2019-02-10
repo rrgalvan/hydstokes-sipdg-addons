@@ -17,11 +17,14 @@ real SIPPenalty=nu*5; // Penalty to achieve coercivity in DG SIP forms
 real domainEpsilon = 0; // 1e-4;
 string testDescription="HydStokes_P1P1DG_eps=" + domainEpsilon;
 real dEps2 = domainEpsilon*domainEpsilon;
+real dEpsilon2 = dEps2;
 
-func uSurface = x*(1-x); // Horizontal surface velocity in cavity test
+func uSurface = 0; //x*(1-x); // Horizontal surface velocity in cavity test
 // func uSurface=1;
-func f1 = 0; // RHS / u
-func f2 = 0; // RHS / v
+include "exact-sol-HydStokes-steady.idp"
+func f1 = f1Exact; // RHS / u
+func f2 = f2Exact; // RHS / v
+
 real pEpsilon  = 1.0e-15; // Penalty epsilon in p-equations
 
 // Structured mesh
@@ -119,6 +122,11 @@ problem HydStokesSIP([u,v,p], [ub,vb,pb]) =
   - bSIP1(u,v,pb) - bSIP2(u,v,pb) // Bilinear form b(.,.)
   + shP(p, pb) // p jumps
   + int2d(Th)(pEpsilon*p*pb)
+  - int2d(Th)
+  (
+   + f1(x,y) * ub
+   + f2(x,y) * vb
+   )
 
   //
   // 1.b) On Neumann boundaries, we must cancel "Dirichlet" terms
