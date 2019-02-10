@@ -1,0 +1,129 @@
+-- FreeFem++ v  3.470000 (date 2017-12-20)
+ Load: lg_fem lg_mesh lg_mesh3 eigenvalue 
+
+ *** Warning  The identifier x hide a Global identifier  
+
+ *** Warning  The identifier y hide a Global identifier  
+
+ *** Warning  The identifier x hide a Global identifier  
+
+ *** Warning  The identifier y hide a Global identifier  
+
+ *** Warning  The identifier x hide a Global identifier  
+
+ *** Warning  The identifier y hide a Global identifier  
+
+ *** Warning  The identifier x hide a Global identifier  
+
+ *** Warning  The identifier y hide a Global identifier  
+
+ *** Warning  The identifier x hide a Global identifier  
+
+ *** Warning  The identifier y hide a Global identifier  
+
+ *** Warning  The identifier x hide a Global identifier  
+
+ *** Warning  The identifier y hide a Global identifier  
+
+ *** Warning  The identifier x hide a Global identifier  
+
+ *** Warning  The identifier y hide a Global identifier  
+
+ *** Warning  The identifier x hide a Global identifier  
+
+ *** Warning  The identifier y hide a Global identifier  
+
+ *** Warning  The identifier x hide a Global identifier  
+
+ *** Warning  The identifier y hide a Global identifier  
+
+ *** Warning  The identifier x hide a Global identifier  
+
+ *** Warning  The identifier y hide a Global identifier  
+
+ *** Warning  The identifier x hide a Global identifier  
+
+ *** Warning  The identifier y hide a Global identifier  
+
+ *** Warning  The identifier x hide a Global identifier  
+
+ *** Warning  The identifier y hide a Global identifier  
+
+ *** Warning  The identifier x hide a Global identifier  
+
+ *** Warning  The identifier y hide a Global identifier  
+
+ *** Warning  The identifier x hide a Global identifier  
+
+ *** Warning  The identifier y hide a Global identifier  
+
+ *** Warning  The identifier x hide a Global identifier  
+
+ *** Warning  The identifier y hide a Global identifier  
+
+ *** Warning  The identifier x hide a Global identifier  
+
+ *** Warning  The identifier y hide a Global identifier  
+
+ *** Warning  The identifier x hide a Global identifier  
+
+ *** Warning  The identifier y hide a Global identifier  
+ load: iovtk 
+Write Mesh and Solutions in VTK Formats
+Write Mesh and Solutions in VTK Formats
+Write Mesh and Solutions in VTK Formats
+ sizestack + 1024 =14793  ( 13769 )
+
+n=8
+DG SIP time: 0.270724 << [SIP-DG]
+CG time:     0.064855
+DG u error H1: 0.95227
+DG u error L2: 0.0504945
+DG v error L2: 0.152979
+DG p error L2: 0.165072
+CG u/p error L2: 1.22474/6.28319
+n=16
+DG SIP time: 1.00815 << [SIP-DG]
+CG time:     0.247558
+DG u error H1: 0.478873
+DG u error L2: 0.0143511
+DG v error L2: 0.0867112
+DG p error L2: 0.0430855
+CG u/p error L2: 1.22474/6.28319
+Convergence rates... 
+ * u, L2 :1.81497
+ * u, H1 :0.991727
+ * v, L2 :0.819042
+ * v, H1 :-0.161682
+ * p, L2 :1.93782
+
+n=32
+DG SIP time: 4.30574 << [SIP-DG]
+CG time:     0.562894
+DG u error H1: 0.237154
+DG u error L2: 0.00375982
+DG v error L2: 0.0457886
+DG p error L2: 0.0122114
+CG u/p error L2: 1.22474/6.28319
+Convergence rates... 
+ * u, L2 :1.93242
+ * u, H1 :1.01382
+ * v, L2 :0.92123
+ * v, H1 :-0.0771091
+ * p, L2 :1.81898
+
+n=64
+DG SIP time: 20.1674 << [SIP-DG]
+CG time:     1.38794
+DG u error H1: 0.117799
+DG u error L2: 0.000956141
+DG v error L2: 0.0234418
+DG p error L2: 0.00411592
+CG u/p error L2: 1.22474/6.28319
+Convergence rates... 
+ * u, L2 :1.97537
+ * u, H1 :1.00949
+ * v, L2 :0.965907
+ * v, H1 :-0.0341343
+ * p, L2 :1.56894
+

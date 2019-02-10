@@ -266,8 +266,10 @@ for(int i=0; i<meshSizes.n; i++) {
   vErrL2[1] = sqrt(int2d(Th)(square(v-vExact(x,y))));
   vErrH1[1] = sqrt(int2d(Th)(square(dx(v)-DXvExact(x,y))));
   pErrL2[1] = sqrt(int2d(Th)(square(p-pExact(x,y))));
-  cout << "DG u,v/p error L2: " << uErrL2[1] << "," << vErrL2[1] << "/" << pErrL2[1] << "<<***" << endl;
-  cout << "DG u,v error H1: " << uErrH1[1] << "," << vErrH1[1]  << endl;
+  cout << "DG u error H1: " << uErrH1[1] << endl;
+  cout << "DG u error L2: " << uErrL2[1] << endl;
+  cout << "DG v error L2: " << vErrL2[1] << endl;
+  cout << "DG p error L2: " << pErrL2[1] << endl;
   uuErrL2[1] = sqrt(int2d(Th)(square(uu-uExact(x,y))) + int2d(Th)(square(vv-vExact(x,y))));
   uuErrH1[1] = sqrt(int2d(Th)(square(dx(uu)-DXuExact(x,y))) + int2d(Th)(square(dy(uu)-DYuExact(x,y))));
   ppErrL2[1] = sqrt(int2d(Th)(square(pp-pExact(x,y))));
