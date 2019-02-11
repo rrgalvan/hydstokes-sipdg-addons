@@ -10,6 +10,8 @@
 ////////////////
 
 verbosity=0;
+//load UMFPACK;
+//load "MUMPS_FreeFem";
 
 real nu=1;
 real SIPPenalty=nu*5; // Penalty to achieve coercivity in DG SIP forms
@@ -29,7 +31,7 @@ real pEpsilon  = 1.0e-15; // Penalty epsilon in p-equations
 real[int] uErrL2(2), uErrH1(2), vErrL2(2), vErrH1(2), pErrL2(2); // Errors in 2 time steps (for orders)
 real[int] uuErrL2(2), uuErrH1(2), ppErrL2(2); // Errors in 2 time steps (for orders)
 
-int [int] meshSizes= [8,16,32,64];
+int [int] meshSizes= [4,8,16,32,64,128];
 
 for(int i=0; i<meshSizes.n; i++) {
   int n = meshSizes[i];
