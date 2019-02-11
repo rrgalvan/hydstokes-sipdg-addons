@@ -1,94 +1,558 @@
--- FreeFem++ v  3.470000 (date 2017-12-20)
+-- FreeFem++ v  3.620000 (date dom feb 10 20:50:27 CET 2019)
  Load: lg_fem lg_mesh lg_mesh3 eigenvalue 
-
+    1 : // Discontinous Galerlin SIP Method for solve Stokes system
+    2 : //
+    3 : // Based on [Di Pietro - Ern, Mathematical Aspects of Discontinuous
+    4 : // Galerkin Methods], Chapter 6
+    5 : //
+    6 : // J. Rafael Rodr\'iguez Galv\'an
+    7 : 
+    8 : ////////////////
+    9 : // Parameters //
+   10 : ////////////////
+   11 : 
+   12 : verbosity=0;
+   13 : 
+   14 : real nu=1;
+   15 : real SIPPenalty=nu*5; // Penalty to achieve coercivity in DG SIP forms
+   16 : real domainEpsilon = 0; // 1e-4;
+   17 : string testDescription="HydStokes_P1P1DG_eps=" + domainEpsilon;
+   18 : real dEps2 = domainEpsilon*domainEpsilon;
+   19 : real dEpsilon2 = dEps2;
+   20 : 
+   21 : func uSurface = 0; //x*(1-x); // Horizontal surface velocity in cavity test
+   22 : // func uSurface=1;
+   23 : include "exact-sol-HydStokes-steady.idp"// Exact solutiion for 2d steady Stokes equations in the domain
+    2 : // [0,1]x[0,1]
+    3 : 
+    4 : real piSquare=pi*pi, pi2 = 2*pi;
+    5 : 
+    6 : func real uExact(real x, real y)
  *** Warning  The identifier x hide a Global identifier  
 
  *** Warning  The identifier y hide a Global identifier  
-
+ {
+    7 :   return (cos(pi2*x)-1)*sin(pi2*y);  //
+    8 : }
+    9 : func real vExact(real x, real y)
  *** Warning  The identifier x hide a Global identifier  
 
  *** Warning  The identifier y hide a Global identifier  
-
+ {
+   10 :   return -uExact(y,x);
+   11 : }
+   12 : func real DXuExact(real x, real y)
  *** Warning  The identifier x hide a Global identifier  
 
  *** Warning  The identifier y hide a Global identifier  
-
+ {
+   13 :   return -pi2*sin(pi2*x)*sin(pi2*y);
+   14 : }
+   15 : func real DXXuExact(real x, real y)
  *** Warning  The identifier x hide a Global identifier  
 
  *** Warning  The identifier y hide a Global identifier  
-
+ {
+   16 :   return -4*piSquare*cos(pi2*x)*sin(pi2*y);
+   17 : }
+   18 : func real DYuExact(real x, real y)
  *** Warning  The identifier x hide a Global identifier  
 
  *** Warning  The identifier y hide a Global identifier  
-
+ {
+   19 :   return  pi2*(cos(pi2*x)-1)*cos(pi2*y);
+   20 : }
+   21 : func real DYYuExact(real x, real y)
  *** Warning  The identifier x hide a Global identifier  
 
  *** Warning  The identifier y hide a Global identifier  
-
+ {
+   22 :   return -4*piSquare*(cos(pi2*x)-1)*sin(pi2*y);
+   23 : }
+   24 : func real DTuExact(real x, real y)
  *** Warning  The identifier x hide a Global identifier  
 
  *** Warning  The identifier y hide a Global identifier  
-
+ {
+   25 :   return -uExact(x,y);
+   26 : }
+   27 : 
+   28 : func real DXvExact(real x, real y)
  *** Warning  The identifier x hide a Global identifier  
 
  *** Warning  The identifier y hide a Global identifier  
-
+ {
+   29 :   return -DYuExact(y,x);
+   30 : }
+   31 : func real DXXvExact(real x, real y)
  *** Warning  The identifier x hide a Global identifier  
 
  *** Warning  The identifier y hide a Global identifier  
-
+ {
+   32 :   return -DYYuExact(y,x);
+   33 : }
+   34 : func real DYvExact(real x, real y)
  *** Warning  The identifier x hide a Global identifier  
 
  *** Warning  The identifier y hide a Global identifier  
-
+ {
+   35 :   return -DXuExact(y,x);
+   36 : }
+   37 : func real DYYvExact(real x, real y)
  *** Warning  The identifier x hide a Global identifier  
 
  *** Warning  The identifier y hide a Global identifier  
-
+ {
+   38 :   return -DXXuExact(y,x);
+   39 : }
+   40 : func real DTvExact(real x, real y)
  *** Warning  The identifier x hide a Global identifier  
 
  *** Warning  The identifier y hide a Global identifier  
-
+ {
+   41 :   return -vExact(x,y);
+   42 : }
+   43 : 
+   44 : func real pExact(real x, real y)
  *** Warning  The identifier x hide a Global identifier  
 
  *** Warning  The identifier y hide a Global identifier  
-
+ {
+   45 :   return pi2*(sin(pi2*y)+sin(pi2*x));
+   46 : }
+   47 : func real DXpExact(real x, real y)
  *** Warning  The identifier x hide a Global identifier  
 
  *** Warning  The identifier y hide a Global identifier  
-
+ {
+   48 :   return 4*piSquare*cos(pi2*x);
+   49 : }
+   50 : func real DYpExact(real x, real y)
  *** Warning  The identifier x hide a Global identifier  
 
  *** Warning  The identifier y hide a Global identifier  
-
+ {
+   51 :   return 4*piSquare*cos(pi2*y);
+   52 : }
+   53 : 
+   54 : 
+   55 : func real f1Exact(real x, real y)
  *** Warning  The identifier x hide a Global identifier  
 
  *** Warning  The identifier y hide a Global identifier  
-
+ {
+   56 :   return  // DTuExact(x,y)		 	// dt(u)
+   57 :     -nu*(DXXuExact(x,y)+DYYuExact(x,y))  // - nu*(dxx(u)+dyy(u))
+   58 :     + DXpExact(x,y)                   // + dx(p)
+   59 :     // + uExact(x,y)*DXuExact(x,y)+ vExact(x,y)*DYuExact(x,y) //+ u dx(u)+ v dy(u)
+   60 :     ;
+   61 : }
+   62 : func real f2Exact(real x, real y)
  *** Warning  The identifier x hide a Global identifier  
 
  *** Warning  The identifier y hide a Global identifier  
- load: iovtk 
-Write Mesh and Solutions in VTK Formats
-Write Mesh and Solutions in VTK Formats
-Write Mesh and Solutions in VTK Formats
- sizestack + 1024 =14793  ( 13769 )
+ {
+   63 :   return  // dEpsilon2*DTvExact(x,y)	 	// dt(v)
+   64 :     -nu*dEpsilon2*(DXXvExact(x,y)+DYYvExact(x,y))  	// - (dxx(v)+dyy(v))
+   65 :     + DYpExact(x,y)                   		// + dy(p)
+   66 :     // + dEpsilon2*(uExact(x,y)*DXvExact(x,y)+ vExact(x,y)*DYvExact(x,y)) //+ u dx(v)+ v dy(v)
+   67 :     ;
+   68 : }
+   69 : 
+   24 : func f1 = f1Exact; // RHS / u
+   25 : func f2 = f2Exact; // RHS / v
+   26 : 
+   27 : real pEpsilon  = 1.0e-15; // Penalty epsilon in p-equations
+   28 : 
+   29 : real[int] uErrL2(2), uErrH1(2), vErrL2(2), vErrH1(2), pErrL2(2); // Errors in 2 time steps (for orders)
+   30 : real[int] uuErrL2(2), uuErrH1(2), ppErrL2(2); // Errors in 2 time steps (for orders)
+   31 : 
+   32 : int [int] meshSizes= [4,8,16,32,64,128];
+   33 : 
+   34 : for(int i=0; i<meshSizes.n; i++) {
+   35 :   int n = meshSizes[i];
+   36 :   cout << "n=" << n << endl;
+   37 : 
+   38 :   //Structured mesh
+   39 :   mesh Th = square(n,n);
+   40 :   int bottom=1, surface=3; int [int] walls = [2,4];
+   41 :   // // Unstructured mesh
+   42 :   // real domainX0=0, domainX1=1, domainY0=0, domainY1=1;
+   43 :   // real ix=domainX1-domainX0, iy=domainY1-domainY0;
+   44 :   // int walls=100;
+   45 :   // border bottom(t=0,ix) { x=domainX0+t; y=domainY0;   }
+   46 :   // border rWall(t=0,iy)  { x=domainX1;   y=domainY0+t; label=walls;}
+   47 :   // border surface(t=0,ix){ x=domainX1-t; y=domainY1;   }
+   48 :   // border lWall(t=0,iy)  { x=domainX0;   y=domainY1-t; label=walls;}
+   49 :   // int  n = 30; // Mesh size
+   50 :   // mesh Th=buildmesh( bottom(n) + rWall(n) + surface(n) + lWall(n) );
+   51 : 
+   52 :   func PkDGu = P1dc;  // Discontinuous Pk for pressure
+   53 :   func PkDGp = P1dc;  // Discontinuous Pk for pressure
+   54 :   func PkCGu = P1b;  // Continous Pk for velocity
+   55 :   func PkCGp = P1;  // Continous Pk for pressure
+   56 :   // int qfo = 2*k+1;  // Order of quadrature formula
+   57 :   // int qfoP = qfo;  // Order of quadrature formula for pressure integrals
+   58 : 
+   59 :   // Discontinuous FE
+   60 :   fespace UhDisc(Th,PkDGu);
+   61 :   fespace VhDisc(Th,PkDGu);
+   62 :   fespace PhDisc(Th,PkDGp);
+   63 :   UhDisc u, ub;
+   64 :   VhDisc v, vb;
+   65 :   PhDisc p, pb;
+   66 : 
+   67 :   // Continuous FE (for testing)
+   68 :   fespace UhCont(Th,PkCGu);
+   69 :   fespace VhCont(Th,PkCGu);
+   70 :   fespace PhCont(Th,PkCGp);
+   71 :   UhCont uu, uub;
+   72 :   VhCont vv, vvb;
+   73 :   PhCont pp, ppb;
+   74 : 
+   75 :   ////////////
+   76 :   // Macros //
+   77 :   ////////////
+   78 : 
+   79 :   macro dn(u) (N.x*dx(u)+N.y*dy(u))  )   (N.x*dx(u)+N.y*dy(u)) //  Normal derivative
+   80 :     ;
+   81 :   macro div(u,v) (dx(u)+dy(v))  )   (dx(u)+dy(v)) // EOM
+   82 :     ;
+   83 :   // def: jump = external - internal value; on border exter value =0
+   84 :   //      average = (external + internal value)/2, on border just internal value
+   85 :   NewMacro aSIP(u, ub, coefficient)
+   86 #     (
+   87 #      int2d(Th) ( (coefficient)*nu * ( dx(u)*dx(ub) + dy(u)*dy(ub) ) )
+   88 #      + intalledges(Th)
+   89 #      (
+   90 #       + (coefficient)*nu * ( average(dn(u))*jump(ub) + jump(u)*average(dn(ub)) ) / nTonEdge
+      + (coefficient) * (SIPPenalty/lenEdge)*(jump(u)*jump(ub)) / nTonEdge
+      )
+   91 #      ) EndMacro )  
+   92 :     (
+   93 :      int2d(Th) ( (coefficient)*nu * ( dx(u)*dx(ub) + dy(u)*dy(ub) ) )
+   94 :      + intalledges(Th)
+   95 :      (
+   96 :       + (coefficient)*nu * ( average(dn(u))*jump(ub) + jump(u)*average(dn(ub)) ) / nTonEdge
+   97 :       + (coefficient) * (SIPPenalty/lenEdge)*(jump(u)*jump(ub)) / nTonEdge
+   98 :       )
+   99 :      ) ;
+  100 :   NewMacro bSIP1(u,v,p)
+  101 #     int2d(Th)( -p*(div(u,v)) )
+  102 #     EndMacro )  
+  103 :     int2d(Th)( -p*(div(u,v)) )
+  104 :     ;
+  105 :   NewMacro bSIP2(u,v,p)
+  106 #     intalledges(Th)
+  107 #     (
+  108 #      // (nTonEdge-1)*(jump(u)*N.x + jump(v)*N.y)*average(p)
+  109 #      -(jump(u)*N.x + jump(v)*N.y)*average(p) /nTonEdge
+     ) EndMacro )  
+  110 :     intalledges(Th)
+  111 :     (
+  112 :      // (nTonEdge-1)*(jump(u)*N.x + jump(v)*N.y)*average(p)
+  113 :      -(jump(u)*N.x + jump(v)*N.y)*average(p) /nTonEdge
+  114 :      ) ;
+  115 :   NewMacro shV(v, vb, coefficient)
+  116 #     intalledges(Th)
+  117 #     (
+  118 #      (coefficient)/lenEdge * (jump(v)*jump(vb)*N.y*N.y) / nTonEdge
+     ) EndMacro )  
+  119 :     intalledges(Th)
+  120 :     (
+  121 :      (coefficient)/lenEdge * (jump(v)*jump(vb)*N.y*N.y) / nTonEdge
+  122 :      ) ;
+  123 :   NewMacro shP(q,r)
+  124 #     intalledges(Th)
+  125 #     (
+  126 #      (nTonEdge-1)*lenEdge*jump(q)*jump(r) / nTonEdge
+     ) EndMacro )  
+  127 :     intalledges(Th)
+  128 :     (
+  129 :      (nTonEdge-1)*lenEdge*jump(q)*jump(r) / nTonEdge
+  130 :      ) ;
+  131 : 
+  132 :   //////////////////////////////
+  133 :   // Variational Formulations //
+  134 :   //////////////////////////////
+  135 : 
+  136 :   problem HydStokesSIP([u,v,p], [ub,vb,pb], solver=UMFPACK,tolpivot=1.e-0) =
+  137 :     // ================
+  138 :     // 1. Bilinear form
+  139 :     // ================
+  140 : 
+  141 :     //
+  142 :     // 1.a) Mount all terms
+  143 :     //
+  144 : 
+  145 :     aSIP(u, ub, 1)
+   86 :     
+   87 :               
+   88 :       
+   89 :      
+   90 :                
+   91 :            
+   92 :       
+   93 :       
+   86 :     (
+   87 :      int2d(Th) ( ( 1)*nu * ( dx(u)*dx( ub) + dy(u)*dy( ub) ) )
+   88 :      + intalledges(Th)
+   89 :      (
+   90 :       + ( 1)*nu * ( average(dn(u)   (N.x*dx(u)+N.y*dy(u)) )*jump( ub) + jump(u)*average(dn( ub)   (N.x*dx( ub)+N.y*dy( ub)) ) ) / nTonEdge
+   91 :       + ( 1) * (SIPPenalty/lenEdge)*(jump(u)*jump( ub)) / nTonEdge
+   92 :       )
+   93 :      )  + aSIP(v, vb, dEps2)
+   86 :     
+   87 :               
+   88 :       
+   89 :      
+   90 :                
+   91 :            
+   92 :       
+   93 :       
+   86 :     (
+   87 :      int2d(Th) ( ( dEps2)*nu * ( dx(v)*dx( vb) + dy(v)*dy( vb) ) )
+   88 :      + intalledges(Th)
+   89 :      (
+   90 :       + ( dEps2)*nu * ( average(dn(v)   (N.x*dx(v)+N.y*dy(v)) )*jump( vb) + jump(v)*average(dn( vb)   (N.x*dx( vb)+N.y*dy( vb)) ) ) / nTonEdge
+   91 :       + ( dEps2) * (SIPPenalty/lenEdge)*(jump(v)*jump( vb)) / nTonEdge
+   92 :       )
+   93 :      )  + shV(v, vb, (1-dEps2))
+  116 :     
+  117 :     
+  118 :          
+  119 :       
+  116 :     intalledges(Th)
+  117 :     (
+  118 :      ( (1-dEps2))/lenEdge * (jump(v)*jump( vb)*N.y*N.y) / nTonEdge
+  119 :      )  // Bilinear form a(.,.)
+  146 :     + bSIP1(ub,vb,p)
+  101 :       
+  102 :     
+  101 :     int2d(Th)( -p*(div(ub,vb)   (dx(ub)+dy(vb)) ) )
+  102 :      + bSIP2(ub,vb,p)
+  106 :     
+  107 :     
+  108 :      // (nTonEdge-1)*(jump(u)*N.x + jump(v)*N.y)*average(p)
+  109 :         
+  110 :       
+  106 :     intalledges(Th)
+  107 :     (
+  108 :      // (nTonEdge-1)*(jump(u)*N.x + jump(v)*N.y)*average(p)
+  109 :      -(jump(ub)*N.x + jump(vb)*N.y)*average(p) /nTonEdge
+  110 :      )  // Bilinear form b(.,.)
+  147 :     - bSIP1(u,v,pb)
+  101 :       
+  102 :     
+  101 :     int2d(Th)( -pb*(div(u,v)   (dx(u)+dy(v)) ) )
+  102 :      - bSIP2(u,v,pb)
+  106 :     
+  107 :     
+  108 :      // (nTonEdge-1)*(jump(u)*N.x + jump(v)*N.y)*average(p)
+  109 :         
+  110 :       
+  106 :     intalledges(Th)
+  107 :     (
+  108 :      // (nTonEdge-1)*(jump(u)*N.x + jump(v)*N.y)*average(p)
+  109 :      -(jump(u)*N.x + jump(v)*N.y)*average(pb) /nTonEdge
+  110 :      )  // Bilinear form b(.,.)
+  148 :     + shP(p, pb)
+  124 :     
+  125 :     
+  126 :        
+  127 :       
+  124 :     intalledges(Th)
+  125 :     (
+  126 :      (nTonEdge-1)*lenEdge*jump(p)*jump( pb) / nTonEdge
+  127 :      )  // p jumps
+  149 :     + int2d(Th)(pEpsilon*p*pb)
+  150 :     - int2d(Th)
+  151 :     (
+  152 :      + f1(x,y) * ub
+  153 :      + f2(x,y) * vb
+  154 :      )
+  155 : 
+  156 :     //
+  157 :     // 1.b) On Neumann boundaries, we must cancel "Dirichlet" terms
+  158 :     // (where u or v appears) coming from SIP bilinear form. Also if
+  159 :     // dirichlet b.c. are imposed to pressure, the must be canceled.
+  160 :     //
+  161 : 
+  162 :     // 1.b.1) On wall boundaries, we have neumann b.c. for v (non Dirichlet)
+  163 :     - int1d(Th, walls)
+  164 :     (
+  165 :      dEps2 * ( - nu*v*dn(vb)   (N.x*dx(vb)+N.y*dy(vb))  + (SIPPenalty/lenEdge)*(v*vb) ) // from aSIP(v,vb)
+  166 :      // + (1-dEps2)/lenEdge * (v*N.y*vb*N.y) // from +(1-eps)*sh(v,bv)
+  167 :      // - v*N.y*pb // from -b(w,pb)
+  168 :      )
+  169 : 
+  170 :     // 1.b.2) We have no b. condition for p in any boundary
+  171 :     // - int1d(Th, surface, bottom, walls)
+  172 :     // (
+  173 :     //   (ub*N.x+vb*N.y)*p // from +b(wb,p)
+  174 :     //  )
+  175 : 
+  176 :     //
+  177 :     // 1.c) On Dirichlet boundaries, we must cancel "Neumann" terms
+  178 :     // (where dn(u) or dn(v) appears) which come from SIP bilinear form
+  179 :     //
+  180 : 
+  181 :     // // 1.c.1) On surface and bottom boundaries, we have diriclet b.c. for u,v
+  182 :     // - int1d(Th, surface, bottom)
+  183 :     // (
+  184 :     //  - nu *       ( dn(u)*ub )  // from aSIP(u,ub)
+  185 :     //  - nu*dEps2 * ( dn(v)*vb )  // from aSIP(v,vb)
+  186 :     //  )
+  187 :     // // 1.c.2) On wall boundaries, we have diriclet b.c. for u
+  188 :     // - int1d(Th, walls)
+  189 :     // (
+  190 :     //  - nu *       ( dn(u)*ub )  // from aSIP(u,ub)
+  191 :     //  )
+  192 : 
+  193 :     // ================
+  194 :     // 2. Linear form
+  195 :     // ================
+  196 : 
+  197 :     //
+  198 :     // 2.a) Dirichlet boundary conditions. We only fix u on surface
+  199 :     // boundary because all other dirichlet b.c. are homogeneous
+  200 :     //
+  201 :     - int1d(Th, surface)
+  202 :     (
+  203 :      - nu * uSurface*dn(ub)   (N.x*dx(ub)+N.y*dy(ub))  + (SIPPenalty/lenEdge) * uSurface*ub // from aSIP(u,ub)
+  204 :      // - uSurface*N.x*pb // from -b(u,pb)
+  205 :      )
+  206 : 
+  207 :     //
+  208 :     // 2.b) Neumann boundary conditions: dn(v)=0 on side walls. Terms
+  209 :     // are omitted becouse we have homogeneous b.c.
+  210 :     //
+  211 :     // - int1d(Th, walls) (0*vb)
+  212 : 
+  213 :     ; // end problem HydStokesSIP -------------------------------------------------------------
+  214 : 
+  215 : 
+  216 :   problem HydStokes([uu,vv,pp], [uub,vvb,ppb]) =
+  217 :     int2d(Th) (
+  218 : 	       + nu * ( dx(uu)*dx(uub) + dy(uu)*dy(uub) )
+  219 : 	       + nu*dEps2 * ( dx(vv)*dx(vvb) + dy(vv)*dy(vvb) )
+  220 : 	       - pp*dx(uub) - pp*dy(vvb)
+  221 : 	       + dx(uu)*ppb + dy(vv)*ppb
+  222 : 	       + nu*div(uu,vv)   (dx(uu)+dy(vv)) *dy(vvb) // dz(v) stabilization term
+  223 : 	       + pEpsilon*pp*ppb
+  224 : 	       )
+  225 :     + on(surface, uu=uSurface, vv=0)
+  226 :     + on(walls, uu=0)
+  227 :     + on(bottom, uu=0, vv=0);
+  228 :   ;
+  229 : 
+  230 :   //////////////
+  231 :   // Solve DG //
+  232 :   //////////////
+  233 :   real time0, time1;
+  234 :   time0 = clock();
+  235 :   HydStokesSIP;
+  236 :   // Force zero mean
+  237 :   bool forceZeroMean=true; if(forceZeroMean) {
+  238 :     real pMean = int2d(Th)(p)/int2d(Th)(1.0);
+  239 :     p = p - pMean;
+  240 :   }
+  241 :   time1 = clock();
+  242 :   cout << "DG SIP time: " << time1-time0 << " << [SIP-DG]"<< endl;
+  243 : 
+  244 :   int interactive=0; // If 1: plot results
+  245 :   if(interactive) plot(p,[u,v],cmm="Discontinuous Galerkin",wait=1,value=1,fill=1);
+  246 :   // if(interactive) plot(p,cmm="Discontinuous Galerkin",wait=1,value=1,fill=1);
+  247 : 
+  248 :   //////////////
+  249 :   // Solve CG //
+  250 :   //////////////
+  251 :   time0 = clock();
+  252 :   HydStokes;
+  253 :   // Force zero mean
+  254 :   bool forceZeroMeanCG=forceZeroMean; if(forceZeroMeanCG) {
+  255 :     real pMean = int2d(Th)(p)/int2d(Th)(1.0);
+  256 :     p = p - pMean;
+  257 :   }
+  258 :   time1 = clock();
+  259 :   cout << "CG time:     " << time1-time0 << endl;
+  260 :   if(interactive) plot(pp,[uu,vv],cmm="Continuous Galekin",wait=1,value=1,fill=1);
+  261 :   // if(interactive) plot(pp,cmm="Continuous Galekin",wait=1,value=1,fill=1);
+  262 : 
+  263 :   bool saveVTK=false; if(saveVTK) {
+  264 :     load "iovtk" load: iovtk 
+;
+  265 :     savevtk("/tmp/DGsolution" + n + ".vtk",
+  266 :   	    Th,
+  267 :   	    [u,v,0],
+  268 :   	    p,
+  269 :   	    dataname="Velocity Pressure") ;
+  270 :     savevtk("/tmp/CGsolution" + n + ".vtk",
+  271 :   	    Th,
+  272 :   	    [uu,vv,0],
+  273 :   	    pp,
+  274 :   	    dataname="Velocity Pressure") ;
+  275 :     savevtk("/tmp/EXACTsolution" + n + ".vtk",
+  276 :   	    Th,
+  277 :   	    [uExact(x,y),vExact(x,y),0],
+  278 :   	    pExact(x,y),
+  279 :   	    dataname="ExactV ExactP") ;
+  280 :   }
+  281 : 
+  282 :   uErrL2[1] = sqrt(int2d(Th)(square(u-uExact(x,y))));
+  283 :   uErrH1[1] = sqrt(int2d(Th)(square(dx(u)-DXuExact(x,y))));
+  284 :   vErrL2[1] = sqrt(int2d(Th)(square(v-vExact(x,y))));
+  285 :   vErrH1[1] = sqrt(int2d(Th)(square(dx(v)-DXvExact(x,y))));
+  286 :   pErrL2[1] = sqrt(int2d(Th)(square(p-pExact(x,y))));
+  287 :   cout << "DG u,v/p error L2: " << uErrL2[1] << "," << vErrL2[1] << "/" << pErrL2[1] << "<<***" << endl;
+  288 :   cout << "DG u,v error H1: " << uErrH1[1] << "," << vErrH1[1]  << endl;
+  289 :   uuErrL2[1] = sqrt(int2d(Th)(square(uu-uExact(x,y))) + int2d(Th)(square(vv-vExact(x,y))));
+  290 :   uuErrH1[1] = sqrt(int2d(Th)(square(dx(uu)-DXuExact(x,y))) + int2d(Th)(square(dy(uu)-DYuExact(x,y))));
+  291 :   ppErrL2[1] = sqrt(int2d(Th)(square(pp-pExact(x,y))));
+  292 :   cout << "CG u/p error L2: " << uuErrL2[1] << "/" << ppErrL2[1] << endl;
+  293 : 
+  294 :   if(i>0) { // Compute error orders
+  295 :     cout << "Convergence rates... " << endl <<
+  296 :       " * u, L2 :"   << log(uErrL2[0]/uErrL2[1])/log(2.) << endl <<
+  297 :       " * u, H1 :"   << log(uErrH1[0]/uErrH1[1])/log(2.) << endl <<
+  298 :       " * v, L2 :"   << log(vErrL2[0]/vErrL2[1])/log(2.) << endl <<
+  299 :       " * v, H1 :"   << log(vErrH1[0]/vErrH1[1])/log(2.) << endl <<
+  300 :       " * p, L2 :"   << log(pErrL2[0]/pErrL2[1])/log(2.) << endl <<
+  301 :       endl;
+  302 :   }
+  303 :   uErrL2[0] = uErrL2[1];
+  304 :   uErrH1[0] = uErrH1[1];
+  305 :   vErrL2[0] = vErrL2[1];
+  306 :   vErrH1[0] = vErrH1[1];
+  307 :   pErrL2[0] = pErrL2[1];
+  308 : 
+  309 :  }
+  310 :  sizestack + 1024 =14793  ( 13769 )
 
-n=8
-DG SIP time: 0.270724 << [SIP-DG]
-CG time:     0.064855
-DG u error H1: 0.95227
-DG u error L2: 0.0504945
-DG v error L2: 0.152979
-DG p error L2: 0.165072
+n=4
+DG SIP time: 0.451483 << [SIP-DG]
+CG time:     0.089095
+DG u,v/p error L2: 0.150283,0.268807/0.625032<<***
+DG u,v error H1: 1.76007,3.96353
 CG u/p error L2: 1.22474/6.28319
+n=8
+DG SIP time: 1.902 << [SIP-DG]
+CG time:     0.379058
+DG u,v/p error L2: 0.0504945,0.152979/0.165072<<***
+DG u,v error H1: 0.95227,4.30075
+CG u/p error L2: 1.22474/6.28319
+Convergence rates... 
+ * u, L2 :1.57348
+ * u, H1 :0.886194
+ * v, L2 :0.81324
+ * v, H1 :-0.117803
+ * p, L2 :1.92084
+
 n=16
-DG SIP time: 1.00815 << [SIP-DG]
-CG time:     0.247558
-DG u error H1: 0.478873
-DG u error L2: 0.0143511
-DG v error L2: 0.0867112
-DG p error L2: 0.0430855
+DG SIP time: 5.27163 << [SIP-DG]
+CG time:     1.50227
+DG u,v/p error L2: 0.0143511,0.0867112/0.0430855<<***
+DG u,v error H1: 0.478873,4.81078
 CG u/p error L2: 1.22474/6.28319
 Convergence rates... 
  * u, L2 :1.81497
@@ -98,12 +562,10 @@ Convergence rates...
  * p, L2 :1.93782
 
 n=32
-DG SIP time: 4.30574 << [SIP-DG]
-CG time:     0.562894
-DG u error H1: 0.237154
-DG u error L2: 0.00375982
-DG v error L2: 0.0457886
-DG p error L2: 0.0122114
+DG SIP time: 24.4357 << [SIP-DG]
+CG time:     3.55693
+DG u,v/p error L2: 0.00375982,0.0457886/0.0122114<<***
+DG u,v error H1: 0.237154,5.0749
 CG u/p error L2: 1.22474/6.28319
 Convergence rates... 
  * u, L2 :1.93242
@@ -113,12 +575,10 @@ Convergence rates...
  * p, L2 :1.81898
 
 n=64
-DG SIP time: 20.1674 << [SIP-DG]
-CG time:     1.38794
-DG u error H1: 0.117799
-DG u error L2: 0.000956141
-DG v error L2: 0.0234418
-DG p error L2: 0.00411592
+DG SIP time: 113.034 << [SIP-DG]
+CG time:     17.7191
+DG u,v/p error L2: 0.000956141,0.0234418/0.00411592<<***
+DG u,v error H1: 0.117799,5.19641
 CG u/p error L2: 1.22474/6.28319
 Convergence rates... 
  * u, L2 :1.97537
@@ -126,4 +586,17 @@ Convergence rates...
  * v, L2 :0.965907
  * v, H1 :-0.0341343
  * p, L2 :1.56894
+
+n=128
+DG SIP time: 531.948 << [SIP-DG]
+CG time:     77.0471
+DG u,v/p error L2: 0.000240646,0.0118479/0.00168428<<***
+DG u,v error H1: 0.0586997,5.25305
+CG u/p error L2: 1.22474/6.28319
+Convergence rates... 
+ * u, L2 :1.99031
+ * u, H1 :1.00491
+ * v, L2 :0.984453
+ * v, H1 :-0.0156407
+ * p, L2 :1.28909
 
