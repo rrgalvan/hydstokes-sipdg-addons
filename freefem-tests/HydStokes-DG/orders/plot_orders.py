@@ -2,27 +2,87 @@
 
 from numpy import *
 from matplotlib.pylab import *
-import os
+from slope_marker import slope_marker
 
-order_names = ["u_H1", "u_L2", "v_L2", "p_L2"]
+rcParams["figure.figsize"] = [10, 9]
+
+def plot_order_line(ax, h_list):
+    n=len(h_list)
+    x=np.array([h_list[n-1], h_list[0]])
+    y=x
+    ax.plot(x,y,'-',color='gray',lw=4, alpha=0.6)
+    y=x**2
+    ax.plot(x,y,'-',color='gray',lw=5, alpha=0.6)
+    legends = ['Order1', 'Order 2']
+    return legends
+
+def plot_triangle(ax, h_list, y_position, slope=1):
+    n=len(h_list)
+    x=np.array([h_list[n-1], h_list[0]])
+    y0=y_position
+    y1=y0+slope*(x[1]-x[0])
+    y=[y0, y1]
+    print ("x, y=",x, y)
+    vertices = [ [x[0], y[0]], [x[1],y[0]], [x[1],y[1]] ]
+    from matplotlib.patches import Polygon
+    triang = Polygon(vertices)
+    ax.add_patch( triang )
+
+error_names = ["u_H1", "u_L2", "v_L2", "p_L2"]
 line_styles=["-","--","-.",":"]
-line_markers=["o","s","^","+"]
+line_markers=["o","s","","^"]
 
-orders={k:None for k in order_names}
+errors={k:None for k in error_names}
 
-print(orders)
+print(errors)
 
-for o in order_names:
-    filename = o + "_errors.txt"
+for e in error_names:
+    filename = e + "_errors.txt"
     with open(filename, 'r') as f:
-        orders[o] = [float(x) for x in f.readlines()]
+        errors[e] = array([float(x) for x in f.readlines()])
 
-n = len(list(orders.values())[0])
-h0 = sqrt(2)/8
-x = [ h0/(n+1) for n in range(n) ]
+n = len(list(errors.values())[0])
+h0 = 1/8
+x = array([ h0/(2**n) for n in range(n) ])
 
-for o,s,m in zip(order_names,line_styles,line_markers):
-    y = orders[o]
-    loglog(x,y,linestyle=s,label=o,marker=m)
+fig = figure()
+ax = fig.add_subplot(1, 1, 1)
+ax.set_xscale('log')
+ax.set_yscale('log')
+
+for e,s,m in zip(error_names,line_styles,line_markers):
+    y = errors[e]
+    ax.plot(x,y,linestyle=s,linewidth=4,label=e,marker=m,markersize=8)
+    print(e, "x=", x, "y=", y)
+
+xlabel("Mesh size")
+ylabel("Error")
 legend()
+
+# Draw (triangle) slope marker
+# plot_triangle(ax, x, min(y), slope=5)
+marker_size = 0.2
+alfax = 0.55
+xmin, xmax = min(x), max(x)
+x_marker = alfax*xmin + (1-alfax)*xmax
+
+print(errors.keys())
+print(errors.values())
+ymin = min([min(errors[k]) for k in errors.keys()])
+ymax = max([max(errors[k]) for k in errors.keys()])
+# ymin, ymax = min(min(errors.values())), max(max(errors.values()))
+print(ymin, ymax)
+
+alfay = 0.998
+y_marker = alfay*ymin+(1-alfay)*ymax
+print(y_marker)
+slope_marker((x_marker, y_marker), slope=(1, 1), size_frac=marker_size, pad_frac=0.07)
+
+alfay = 0.9999
+y_marker = alfay*ymin+(1-alfay)*ymax
+print(y_marker)
+slope_marker((x_marker, y_marker), slope=(2, 1), size_frac=marker_size, pad_frac=0.07)
+
+# plot_order_line(ax, x)
+
 show()
