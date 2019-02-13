@@ -39,10 +39,10 @@ border lWall(t=0,iy)  { x=domainX0;   y=domainY1-t; label=walls;}
 int  n = 30; // Mesh size
 mesh Th=buildmesh( bottom(n) + rWall(n) + surface(n) + lWall(n) );
 
-func PkDGu = P1dc;  // Discontinuous Pk for pressure
-func PkDGp = P1dc;  // Discontinuous Pk for pressure
-func PkCGu = P1b;  // Continous Pk for velocity
-func PkCGp = P1;  // Continous Pk for pressure
+func PkDGu = P2dc;  // Discontinuous Pk for pressure
+func PkDGp = P2dc;  // Discontinuous Pk for pressure
+func PkCGu = P2b;  // Continous Pk for velocity
+func PkCGp = P2;  // Continous Pk for pressure
 // int qfo = 2*k+1;  // Order of quadrature formula
 // int qfoP = qfo;  // Order of quadrature formula for pressure integrals
 
@@ -243,3 +243,17 @@ real errVbottom = sqrt(int1d(Th,bottom)(square(v-0)));
 cout << "  * v on surface: " << errVsurf << endl;
 cout << "  * dn(v) on walls: "  << errDNVwalls << endl;
 cout << "  * v on bottom: " << errVbottom << endl;
+
+bool saveVTK=true; if(saveVTK) {
+  load "iovtk";
+  savevtk("/tmp/DG-HydStokes-solution" + n + ".vtk",
+	  Th,
+	  [u,v,0],
+	  p,
+	  dataname="Velocity_DG Pressure_DG") ;
+  savevtk("/tmp/CG-HydStokes-solution" + n + ".vtk",
+	  Th,
+	  [uu,vv,0],
+	  pp,
+	  dataname="Velocity_CG Pressure_CG") ;
+ }
