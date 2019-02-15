@@ -4,7 +4,7 @@ from numpy import *
 from matplotlib.pylab import *
 from slope_marker import slope_marker
 
-rcParams["figure.figsize"] = [9,7.5]
+rcParams["figure.figsize"] = [8,6]
 
 def plot_order_line(ax, h_list):
     n=len(h_list)
